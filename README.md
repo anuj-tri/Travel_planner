@@ -1,2 +1,1 @@
 # travel-planner
-git init
