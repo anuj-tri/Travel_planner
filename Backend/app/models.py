@@ -7,11 +7,11 @@ class Users(Base):
     __tablename__ = "users"
 
     user_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    first_name: Mapped[str] = mapped_column(String(30))
-    last_name: Mapped[str] = mapped_column(String(30))
-    email: Mapped[str] = mapped_column(String(255), unique=True)
-    password_hash: Mapped[str] = mapped_column(String(255))
-    is_active: Mapped[bool] = mapped_column(default=True)
+    first_name: Mapped[str] = mapped_column(String(30), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(30), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
 
 
 class Trip(Base):
@@ -23,26 +23,29 @@ class Trip(Base):
     ending_destination: Mapped[str] = mapped_column(String(100))
     start_date: Mapped[str] = mapped_column(String(20))
     end_date: Mapped[str] = mapped_column(String(20))
+    no_of_travellers: Mapped[int] = mapped_column(Integer)
     budget: Mapped[float] = mapped_column()
-    status: Mapped[str] = mapped_column(String(20), default="ongoing")
+    status: Mapped[str] = mapped_column(String(20), default="incoming")
 
 
 class Preference(Base):
     __tablename__ = "preferences"
 
-    preference_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    preference_id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
     preference_type: Mapped[str] = mapped_column(String(50))
 
 
 class TripPreference(Base):
     __tablename__ = "trip_preferences"
 
-    trip_preference_id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
+    trip_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("trips.trip_id"), primary_key=True
     )
-    trip_id: Mapped[int] = mapped_column(Integer, ForeignKey("trips.trip_id"))
+
     preference_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("preferences.preference_id")
+        Integer, ForeignKey("preferences.preference_id"), primary_key=True
     )
 
 
@@ -61,7 +64,6 @@ class Place(Base):
     __tablename__ = "places"
 
     place_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    trip_id: Mapped[int] = mapped_column(Integer, ForeignKey("trips.trip_id"))
     place_name: Mapped[str] = mapped_column(String(100))
     place_longitude: Mapped[float] = mapped_column()
     place_latitude: Mapped[float] = mapped_column()
@@ -70,10 +72,10 @@ class Place(Base):
 class ItineraryPlace(Base):
     __tablename__ = "itinerary_places"
 
-    itinerary_place_id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
     itinerary_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("itineraries.itinerary_id")
+        Integer, ForeignKey("itineraries.itinerary_id"), primary_key=True
     )
-    place_id: Mapped[int] = mapped_column(Integer, ForeignKey("places.place_id"))
+    place_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("places.place_id"), primary_key=True
+    )
+    visit_order: Mapped[int] = mapped_column(Integer)
