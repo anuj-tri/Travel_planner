@@ -1,0 +1,210 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+
+}
+
+/*Create new trip page*/
+
+.create-trip-page{
+    padding: 10px 20px 40px 20px;
+
+    font-family: Arial, sans-serif;
+    color: black;
+}
+
+/*PAGE HEADING*/
+
+.page-heading{
+    margin-bottom: 30px;
+}
+
+.page-heading h1{
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.page-heading p{
+    font-size: 14px;
+    color: dimgray;
+    letter-spacing: 0.5px;
+
+}
+
+/* TRIP DETAILS*/
+
+.trip-details{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 30px;
+    background-color: white;
+    padding: 30px;
+    border-radius: 18px;
+    box-shadow:  0 4px 15px lightgrey;
+
+}
+
+/*form group*/
+.form-group{
+    display:flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.form-group label{
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: dimgray;
+}
+
+.form-group input{
+    width: 100%;
+    height: 48px;
+    padding: 0 15px;
+    border: 1px solid lightgray;
+    border-radius: 10px;
+    background-color: white;
+    color: black;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
+}
+
+.form-group input::placeholder{
+    color:darkgray;
+}
+
+.form-group input:focus{
+    border-color: grey;
+    box-shadow: 0 0 0 3px whitesmoke;
+}
+
+/*Prefrences*/
+
+.preferences{
+    margin-top: 30px;
+    background-color: white;
+    padding: 30px;
+    border: 1px solid lightgray;
+    border-radius: 18px;
+    box-shadow: 0 4px 15px lightgrey;
+}
+
+.preferences h2{
+    font-size:20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+
+}
+
+/*PREFERENCES OPTIONS*/
+.preference-options{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.preference-options button{
+    padding: 11px 18px;
+    border : 1px solid lightgray;
+    border-radius: 20px;
+    background-color: white;
+    color: black;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: background-color 0.2s,
+                color 0.2s,
+                border-color 0.2s,
+                transform 0.2s;
+
+}
+
+.preference-options button:hover{
+    background-color: whitesmoke;
+    border-color: grey;
+    transform: translateY(-1px);
+
+}
+
+.preference-options button.selected {
+    background-color: Black;
+    color: white;
+    border-color: black;
+}
+
+/*Generate-trip*/
+
+.generate-trip{
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.generate-trip button{
+    min-width: 190px;
+    height: 50px;
+    padding: 0 25px;
+    border: none;
+    border-radius: 12px;
+    background-color: dimgrey;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    box-shadow: 0 5px 12px lightgray;
+    transition: background-color 0.2s,
+                transform 0.2s,
+                box-shadow 0.2s;
+
+}
+
+.generate-trip button:hover{
+    background-color:black;
+    transform: translateY(-1px);
+}
+
+.generate-trip button{
+    background-color: dimgray;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px lightgray;
+}
+
+.generate-trip button{
+    transform: translateY(0);
+}
+
+/*Responsive design*/
+
+@media (max-width: 800px){
+    .trip-details{
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px){
+    .create-trip-page{
+        padding: 10px 10px 30px 10px;
+    }
+    .trip-details,
+    .preferences{
+        padding: 20px;
+        border-radius: 14px;
+    }
+    .page-heading h1{
+        font-size: 25px;
+    }
+    .generate-trip{
+        justify-content: stretch;
+    }
+    .generate-trip button{
+        width: 100%;
+    }
+}

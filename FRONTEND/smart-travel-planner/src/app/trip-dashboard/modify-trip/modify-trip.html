@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modify Trip - Smart Travel Planner</title>
+</head>
+
+<body>
+  <div class="modify-trips-page">
+
+    <!-- Page heading -->
+    <div class="page-heading">
+      <h1>MODIFY TRIP</h1>
+      <p>EDIT YOUR UPCOMING OR MISSED TRIPS</p>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading" *ngIf="isLoading">
+      <h2>LOADING TRIPS...</h2>
+      <p>Please wait while we fetch your trips.</p>
+    </div>
+
+    <!-- Error message -->
+    <div
+      class="error-message"
+      *ngIf="!isLoading && message">
+
+      {{ message }}
+    </div>
+
+    <!-- Trip list -->
+    <div
+      class="modify-trips-container"
+      *ngIf="!isLoading && !message && savedTrip.length > 0">
+
+      <!-- Individual trip card -->
+      <div
+        class="trip-card"
+        *ngFor="let trip of savedTrip">
+
+        <!-- Trip information -->
+        <div class="trip-information">
+
+          <!-- Destination -->
+          <div class="trip-destination">
+            <h2>
+              {{ trip.starting_destination }} -
+              {{ trip.ending_destination }}
+            </h2>
+          </div>
+
+          <!-- Trip details -->
+          <div class="trip-details">
+
+            <div class="detail-item">
+              <span class="detail-label">DATES</span>
+              <span>
+                {{ trip.start_date }} - {{ trip.end_date }}
+              </span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">TRAVELERS</span>
+              <span>{{ trip.no_of_travellers }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">BUDGET</span>
+              <span>₹ {{ trip.budget }}</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Trip status and action -->
+        <div class="trip-action">
+
+          <!-- Dynamic status badge -->
+          <div
+            class="trip-status"
+            [ngClass]="{
+              'status-upcoming': trip.status === 'upcoming',
+              'status-ongoing': trip.status === 'ongoing',
+              'status-missed': trip.status === 'missed'
+            }">
+
+            <span *ngIf="trip.status === 'upcoming'">◷</span>
+            <span *ngIf="trip.status === 'ongoing'">●</span>
+            <span *ngIf="trip.status === 'missed'">◷</span>
+
+            {{ trip.status | uppercase }}
+          </div>
+
+          <!-- Modify trip -->
+          <button
+            type="button"
+            class="modify-button"
+            (click)="modifyTrip(trip.trip_id)">
+
+            <span>✎</span>
+            MODIFY TRIP
+          </button>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- No eligible trips -->
+    <div
+      class="no-trip"
+      *ngIf="
+        !isLoading &&
+        !message &&
+        savedTrip.length === 0
+      ">
+
+      <h2>NO TRIPS TO MODIFY</h2>
+
+      <p>
+        You have no upcoming, ongoing, or missed trips
+        available for modification.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>

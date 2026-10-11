@@ -1,5 +1,6 @@
+from datetime import date
 from app.database import Base
-from sqlalchemy import String, Integer, ForeignKey
+from sqlalchemy import String, Integer, ForeignKey, Text, Date
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -21,11 +22,11 @@ class Trip(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.user_id"))
     starting_destination: Mapped[str] = mapped_column(String(100))
     ending_destination: Mapped[str] = mapped_column(String(100))
-    start_date: Mapped[str] = mapped_column(String(20))
-    end_date: Mapped[str] = mapped_column(String(20))
+    start_date: Mapped[str] = mapped_column(Date)
+    end_date: Mapped[str] = mapped_column(Date)
     no_of_travellers: Mapped[int] = mapped_column(Integer)
     budget: Mapped[float] = mapped_column()
-    status: Mapped[str] = mapped_column(String(20), default="incoming")
+    status: Mapped[str] = mapped_column(String(20), default="upcoming")
 
 
 class Preference(Base):
@@ -57,7 +58,7 @@ class Itinerary(Base):
     )
     trip_id: Mapped[int] = mapped_column(Integer, ForeignKey("trips.trip_id"))
     day_number: Mapped[int] = mapped_column(Integer)
-    itinerary_data: Mapped[str] = mapped_column(String(500))
+    itinerary_data: Mapped[str] = mapped_column(Text)
 
 
 class Place(Base):
@@ -65,8 +66,8 @@ class Place(Base):
 
     place_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     place_name: Mapped[str] = mapped_column(String(100))
-    place_longitude: Mapped[float] = mapped_column()
-    place_latitude: Mapped[float] = mapped_column()
+    place_longitude: Mapped[float | None] = mapped_column()
+    place_latitude: Mapped[float | None] = mapped_column()
 
 
 class ItineraryPlace(Base):

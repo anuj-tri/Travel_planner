@@ -1,0 +1,121 @@
+<div class="signup-page">
+
+```
+<div class="signup-box">
+
+    <h1><strong>Create an Account</strong></h1>
+
+    <p>Join Smart Travel Planner and start your journey</p>
+
+    <form (ngSubmit)="signup()">
+
+        <label>
+            <strong>First Name:</strong>
+        </label>
+
+        <input
+            type="text"
+            name="firstName"
+            [(ngModel)]="firstName"
+            placeholder="Enter your first name..."
+            required
+        >
+
+        <br><br>
+
+
+        <label>
+            <strong>Last Name:</strong>
+        </label>
+
+        <input
+            type="text"
+            name="lastName"
+            [(ngModel)]="lastName"
+            placeholder="Enter your last name..."
+            required
+        >
+
+        <br><br>
+
+
+        <label>
+            <strong>Email:</strong>
+        </label>
+
+        <input
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            placeholder="Enter your Email..."
+            required
+        >
+
+        <br><br>
+
+
+        <label>
+            <strong>Password:</strong>
+        </label>
+
+        <input
+            type="password"
+            name="password"
+            [(ngModel)]="password"
+            id="password"
+            placeholder="Set your password..."
+            required
+        >
+
+        <br><br>
+
+
+        <label>
+            <strong>Confirm Password:</strong>
+        </label>
+
+        <input
+            type="password"
+            name="confirmPassword"
+            [(ngModel)]="confirmPassword"
+            id="confirm-password"
+            placeholder="Confirm your password..."
+            required
+        >
+
+        <br><br>
+
+
+        <button
+            class="signup-btn"
+            type="submit">
+            Sign Up
+        </button>
+
+
+        <p>
+            Already have an account?
+
+            <button
+                class="login-btn"
+                type="button"
+                (click)="goToLogin()">
+                Login
+            </button>
+        </p>
+
+
+        <p *ngIf="message">
+            {{ message }}
+        </p>
+
+        <p *ngIf="errorMessage">
+            {{ errorMessage }}
+        </p>
+
+    </form>
+
+</div>
+```
+
+</div>

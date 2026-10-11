@@ -1,0 +1,286 @@
+/*main page*/
+
+.saved-trips-pages{
+    min-height: 100vh;
+    background-color: whitesmoke;
+    padding: 30px 40px;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+/*page heading*/
+
+.page-heading {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.page-heading h1{
+    margin: 0;
+    color: black;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.page-heading p{
+    margin-top: 8px;
+    color:grey;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+/*saved trips container*/
+
+.saved-trips-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* trip card*/
+.trip-card{
+    background-color: white;
+    border-radius: 16px;
+    padding: 25px 30px;
+
+    box-shadow: 0 4px 12px lightgrey;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 30px;
+
+    transition: 0.2s ease;
+}
+
+.trip-card:hover{
+    box-shadow: 0 6px 18px darkgray;
+    transform: translateY(-2px);
+}
+
+/*trip information*/
+
+.trip-information {
+    flex: 1;
+}
+
+/*destiantion*/
+
+.trip-destination h2 {
+    margin: 0 0 20px 0;
+
+    color: black;
+    font-size: 23px;
+    font-weight: 700;
+}
+
+/* trip - details*/
+
+.trip-details {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.detail-item{
+    background-color: aliceblue;
+
+    border-radius: 10px;
+
+    padding: 12px 18px;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 5px;
+
+    min-width: 140px;
+}
+
+.detail-label {
+    color: grey;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.detail-item span:last-child {
+    color: midnightblue;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+/* trip action*/
+
+.trip-action{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/*status*/
+
+
+/* Status - common styling */
+
+.trip-status {
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* Upcoming - Blue */
+
+.status-upcoming {
+    background-color: blue;
+    color: white;
+}
+
+/* Ongoing - Green */
+
+.status-ongoing {
+    background-color: green;
+    color: white;
+}
+
+/* Missed - Red */
+
+.status-missed {
+    background-color: rgb(233, 84, 84);
+    color: white;
+}
+
+/* Completed - Grey */
+
+.status-completed {
+    background-color: gainsboro;
+    color: dimgray;
+}
+
+/*view button*/
+
+.view-button {
+    border: none;
+
+    background-color: midnightblue;
+    color: white;
+
+    padding: 11px 18px;
+
+    border-radius: 8px;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.view-button:hover{
+    background-color: black;
+}
+
+/*delete button*/
+
+.delete-button{
+    border: none;
+
+    background-color: indianred;
+    color: white;
+
+    padding: 11px 18px;
+
+    border-radius: 8px;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.delete-button:hover{
+    background-color: darkred;
+}
+
+/*no saved trips*/
+
+.no-trip{
+    background-color: white;
+
+    border-radius: 16px;
+
+    padding: 60px 30px;
+
+    text-align: center;
+
+    box-shadow: 0 4px 12px lightgray;
+}
+
+.no-trip h2{
+    margin: 0 0 10px 0;
+
+    color: midnightblue;
+
+    font-size: 24px;
+}
+
+.no-trip p {
+    margin: 0;
+    color: dimgray;
+    font-size: 15px;
+}
+
+/*Responsive design*/
+
+@media (max-width: 1000px) {
+    .trip-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .trip-action {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+}
+
+@media(max-width: 600px) {
+    .saved-trips-pages{
+        padding: 20px 15px;
+    }
+    .trip-card {
+        padding: 20px;
+    }
+
+    .trip-destination h2 {
+        font-size: 20px;
+    }
+
+    .trip_details{
+        flex-direction: column;
+    }
+
+    .detail-item{
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .trip-action{
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .view-button,
+    .delete-button {
+        width: 100%
+    }
+
+    .trip-status {
+        text-align: center;
+    }
+}

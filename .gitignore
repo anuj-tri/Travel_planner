@@ -1,5 +1,7 @@
 # Python virtual environment
 Backend/venv/
+venv/
+.venv/
 
 # Python cache
 __pycache__/
@@ -11,3 +13,16 @@ __pycache__/
 
 # Logs
 *.log
+
+#angular / node generated files
+
+node_modules/
+.angular/
+dist/
+
+#angular environment file containing the google maps api key
+/FRONTEND/smart-travel-planner/src/environments/environment.ts
+
+#postan rtesting files
+.postman/
+postman/

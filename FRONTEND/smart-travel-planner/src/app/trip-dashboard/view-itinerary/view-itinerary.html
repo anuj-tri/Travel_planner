@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>View Itinerary</title>
+  </head>
+  <body>
+    <main class="main-content">
+      <!-- Back button-->
+
+      <button class="back-button" type="button" (click)="goBack()">← Back to Saved Trips</button>
+
+      <!--trip header-->
+
+      <div class="trip-header">
+        <div class="trip-information">
+          <h1>{{ tripDetails?.starting_destination }} - {{ tripDetails?.ending_destination }}</h1>
+
+          <p class="trip-routes">
+            {{ tripDetails?.starting_destination }} - {{ tripDetails?.ending_destination }}
+          </p>
+          <div class="trip-summary">
+            <span> 📅 {{ tripDetails?.start_date }} - {{ tripDetails?.end_date }}</span>
+            <span> 👥 {{ tripDetails?.no_of_travellers }}</span>
+            <span> 💵 ₹{{ tripDetails?.budget }}</span>
+          </div>
+        </div>
+
+        <div class="trip-status-action">
+          <div class="trip-status">{{ tripStatus | uppercase }}</div>
+
+          <button
+            *ngIf="tripStatus === 'missed'"
+            type="button"
+            class="complete-button"
+            (click)="markTripCompleted()"
+          >
+            MARK AS COMPLETED
+          </button>
+        </div>
+      </div>
+
+      <!--day navigation-->
+      <div class="day-navigation">
+        <button
+          type="button"
+          *ngFor="let day of savedItinerary; let i = index"
+          [class.selected]="selectedDayIndex === i"
+          (click)="selectDay(i)"
+        >
+          <strong> Day {{ day.day_number }} </strong>
+
+          <small>
+            {{ getDayDate(day.day_number) }}
+          </small>
+        </button>
+      </div>
+
+      <!--day content-->
+
+      <div class="day-content" *ngIf="selectedDay">
+        <!-- Left:itinerary-->
+        <section class="itinerary-section">
+          <div class="itinerary-heading">
+            <div>
+              <span class="day-label"> DAY {{ selectedDay.day_number }} </span>
+
+              <h2>
+                {{ selectedDay.itinerary_data.option_name }}
+              </h2>
+            </div>
+          </div>
+
+          <!--places-->
+
+          <div class="place-list">
+            <div
+              class="place-card"
+              *ngFor="let place of selectedDay.itinerary_data.places; let i = index"
+            >
+              <!--number-->
+              <div class="place-number">
+                {{ i + 1 }}
+              </div>
+
+              <!--place information-->
+              <div class="place-information">
+                <h3>{{ place.place_name }}</h3>
+
+                <p class="activity">
+                  {{ getActivityText(place.activity) }}
+                  <span class="price-warning" *ngIf="hasPriceWarning(place.activity)">
+                    *Price may vary depending on demand, weekdays, weekends,season, and
+                    availability.
+                  </span>
+                </p>
+
+                <p class="time">{{ place.approximate_time }}</p>
+              </div>
+
+              <!--entry fees-->
+              <div class="entry-fee">
+                <span> ENTRY FEE</span>
+
+                <strong *ngIf="place.entry_fee_per_person > 0">
+                  {{ place.entry_fee_per_person }}/person</strong
+                >
+
+                <strong *ngIf="place.entry_fee_per_person === 0">FREE ENTRY</strong>
+              </div>
+            </div>
+          </div>
+
+          <!--day sumary-->
+
+          <div class="day-summary">
+            <div>
+              <span> ESTIMATED DURATION</span>
+              <strong> {{ selectedDay.itinerary_data.estimated_duration }}</strong>
+            </div>
+
+            <div>
+              <span>TOTAL ENTRY FEE</span>
+              <strong> ₹{{ selectedDay.itinerary_data.total_entry_fee }}</strong>
+
+              <small> for all travellers</small>
+            </div>
+          </div>
+        </section>
+
+        <!--MAP-->
+        <section class="map-section">
+          <div class="map-header">
+            <h2>MAP</h2>
+          </div>
+
+          <!--google map will be placed here-->
+
+          <div id="saved-itinerary-map" class="map-container"></div>
+        </section>
+      </div>
+
+      <!--NO Itinerary-->
+
+      <div class="no-itinerary" *ngIf="!selectedDay && !isLoading">
+        <h2>NO ITINERARY FOUND</h2>
+        <p>NO SAVED ITINERARY IS AVAILABLE FOR THIS TRIP</p>
+      </div>
+
+      <!--LOADING-->
+
+      <div class="loading" *ngIf="isLoading">
+        <h2>LOADING ITINERARY.....</h2>
+
+        <p>Please wait while we fetch your saved itinerary.</p>
+      </div>
+    </main>
+  </body>
+</html>

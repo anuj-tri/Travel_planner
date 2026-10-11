@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><Trip Dashboard></title>
+  </head>
+  <body>
+    <div class="trip-dashboard">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="website-name">
+          <h2>SMART TRAVEL PLANNER</h2>
+        </div>
+
+        <div class="user-info">
+          <span class="user-icon">◉</span>
+          <span>{{ firstName }} {{ lastName }}</span>
+        </div>
+
+        <!-- Left Sidebar -->
+      </header>
+      <div class="sidebar">
+        <div class="sidebar-menu">
+          <a routerLink="/trip-dashboard/create-new-trip"> CREATE NEW TRIP</a>
+
+          <a routerLink="/trip-dashboard/saved-trips"> SAVED TRIP</a>
+
+          <a routerLink="/trip-dashboard/modify-trip"> MODIFY TRIP</a>
+
+          <a routerLink="/trip-dashboard/profile"> PROFILE</a>
+        </div>
+      </div>
+
+      <!--Right Side : Dynamic Page-->
+
+      <div class="main-content">
+        <router-outlet></router-outlet>
+      </div>
+    </div>
+  </body>
+</html>

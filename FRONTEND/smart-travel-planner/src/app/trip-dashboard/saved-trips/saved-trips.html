@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Saved Trips</title>
+  </head>
+  <body>
+    <div class="saved-trips-pages">
+      <!--heading main-->
+      <div class="page-heading">
+        <h1>SAVED TRIPS</h1>
+        <p>YOUR SAVED TRAVEL ITINERARIES</p>
+      </div>
+
+      <!--saved trips containers-->
+      <div class="saved-trips-container">
+        <!--trip card -->
+        <div class="trip-card" *ngFor="let trip of savedTrip">
+          <!-- trip information-->
+          <div class="trip-information">
+            <!--Destination-->
+            <div class="trip-destination">
+              <h2>{{ trip.starting_destination }} - {{ trip.ending_destination }}</h2>
+            </div>
+
+            <!--trip details-->
+
+            <div class="trip-details">
+              <div class="detail-item">
+                <span class="detail-label">DATES</span>
+
+                <span>{{ trip.start_date }} - {{ trip.end_date }}</span>
+              </div>
+
+              <div class="detail-item">
+                <span class="detail-label">TRAVELERS</span>
+
+                <span>{{ trip.no_of_travellers }}</span>
+              </div>
+
+              <div class="detail-item">
+                <span class="detail-label">BUDGET</span>
+
+                <span>₹ {{ trip.budget }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!--Trip Action-->
+          <div class="trip-action">
+            <div
+              class="trip-status"
+              [ngClass]="{
+                'status-upcoming': trip.status === 'upcoming',
+                'status-ongoing': trip.status === 'ongoing',
+                'status-missed': trip.status === 'missed',
+                'status-completed': trip.status === 'completed',
+              }"
+            >
+              <span *ngIf="trip.status === 'upcoming'">◷</span>
+              <span *ngIf="trip.status === 'ongoing'">●</span>
+              <span *ngIf="trip.status === 'missed'">◷</span>
+
+              {{ trip.status | uppercase }}
+            </div>
+
+            <!--view itinerary-->
+
+            <button type="button" class="view-button" (click)="viewItinerary(trip.trip_id)">
+              VIEW ITINERARY
+            </button>
+
+            <!--DELETE TRIP-->
+
+            <button type="button" class="delete-button" (click)="deleteTrip(trip.trip_id)">
+              DELETE
+            </button>
+          </div>
+        </div>
+
+        <!--Loading saved trip-->
+
+        <div class="loading" *ngIf="isLoading">
+          <h2>LOADING SAVED TRIPS...</h2>
+          <p>Please wait while we fetch your saved itineraries.</p>
+        </div>
+
+        <!--No saved trips-->
+
+        <div class="no-trip" *ngIf="!isLoading && savedTrip.length === 0">
+          <h2>NO SAVED TRIPS</h2>
+
+          <p>You haven't saved any travel itinerary yet.</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
