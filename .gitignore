@@ -26,3 +26,6 @@ dist/
 #postan rtesting files
 .postman/
 postman/
+
+
+/FRONTEND_temp/
