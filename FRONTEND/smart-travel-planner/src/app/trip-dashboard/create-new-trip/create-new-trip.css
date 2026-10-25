@@ -181,6 +181,98 @@
     transform: translateY(0);
 }
 
+
+/*for the generation status below*/
+.generation-status {
+  margin-top: 20px;
+  padding: 22px 24px;
+  background: #ffffff;
+  border: 1px solid #e2e2e2;
+  border-radius: 16px;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.07);
+}
+
+.generation-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.loading-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  background: #000000;
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 24px;
+  animation: plane-pulse 1.8s ease-in-out infinite;
+}
+
+.generation-heading h3 {
+  margin: 0 0 6px;
+  color: #111111;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.generation-heading p {
+  margin: 0;
+  color: #666666;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.progress-track {
+  width: 100%;
+  height: 9px;
+  overflow: hidden;
+  background: #e8e8e8;
+  border-radius: 20px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #111111;
+  border-radius: 20px;
+  transition: width 0.8s ease;
+}
+
+.progress-details {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: #555555;
+  font-size: 13px;
+}
+
+.estimated-time {
+  margin: 16px 0 0;
+  color: #444444;
+  font-size: 14px;
+}
+
+.estimated-time span {
+  margin-right: 6px;
+  font-size: 17px;
+}
+
+@keyframes plane-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+
 /*Responsive design*/
 
 @media (max-width: 800px){
@@ -207,4 +299,14 @@
     .generate-trip button{
         width: 100%;
     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-icon {
+    animation: none;
+  }
+
+  .progress-fill {
+    transition: none;
+  }
 }

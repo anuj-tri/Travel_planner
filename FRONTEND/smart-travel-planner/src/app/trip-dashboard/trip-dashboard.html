@@ -21,14 +21,21 @@
         <!-- Left Sidebar -->
       </header>
       <div class="sidebar">
-        <div class="sidebar-menu">
-          <a routerLink="/trip-dashboard/create-new-trip"> CREATE NEW TRIP</a>
+        <div class="sidebar-menu top-menu">
+          <a routerLink="/trip-dashboard/create-new-trip" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> CREATE NEW TRIP</a>
 
-          <a routerLink="/trip-dashboard/saved-trips"> SAVED TRIP</a>
+          <a routerLink="/trip-dashboard/saved-trips" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> SAVED TRIP</a>
 
-          <a routerLink="/trip-dashboard/modify-trip"> MODIFY TRIP</a>
+          <a routerLink="/trip-dashboard/modify-trip" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> MODIFY TRIP</a>
+        </div>
 
-          <a routerLink="/trip-dashboard/profile"> PROFILE</a>
+        <!-- Bottom menue-->
+
+        <div class ="sidebar-menu bottom-menu">
+
+          <a routerLink="/trip-dashboard/profile" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> PROFILE</a>
+
+          <button class ="logout-button" type ="button" (click)="logout()">LOGOUT</button>
         </div>
       </div>
 

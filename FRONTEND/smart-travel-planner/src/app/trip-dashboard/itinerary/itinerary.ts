@@ -102,7 +102,12 @@ export class Itinerary {
   //save Itinerary
 
   saveItinerary(): void {
-    const allDaySelected = this.selectedOptions.every((option) => option !== null);
+    if (this.isSaving) {
+      return;
+    }
+    const allDaySelected = this.selectedOptions.every(
+      (option) => option !== null,
+    );
 
     if (!allDaySelected) {
       alert('Please select an option for every day.');

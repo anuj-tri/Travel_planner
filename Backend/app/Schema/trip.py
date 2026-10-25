@@ -50,3 +50,37 @@ class UpdateTripDateRequest(BaseModel):
 class DeleteTripResponse(BaseModel):
     trip_id: int
     message: str
+
+class EditTripDetailsResponse(BaseModel):
+    trip_id: int
+    starting_destination: str
+    ending_destination: str
+    start_date: date
+    end_date: date
+    no_of_travellers: int
+    budget: float
+    status: str
+    preference_ids: list[int]
+
+class PreviewModifiedTripRequest(BaseModel):
+    starting_destination: str = Field(min_length=1)
+    ending_destination: str = Field(min_length=1)
+    start_date: date
+    end_date: date
+    no_of_travellers: int = Field(gt=0)
+    budget: float = Field(ge=2000)
+    preference_ids: list[int]
+
+class UpdatedItineraryDay(BaseModel):
+    day_number: int = Field(ge=1)
+    itinerary_data: dict[str, Any]
+
+class SaveModifiedTripRequest(BaseModel):
+    starting_destination: str
+    ending_destination: str
+    start_date: date
+    end_date: date
+    no_of_travellers: int = Field(ge=1)
+    budget: float = Field(ge=0)
+    preference_ids: list[int]
+    itineraries: list[UpdatedItineraryDay]

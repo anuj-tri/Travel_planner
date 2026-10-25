@@ -1,0 +1,11 @@
+
+node_module/
+.angular/
+dist/
+coverage/
+.git/
+.env/
+.env.*
+!.env.example
+*.log
+.vscode/

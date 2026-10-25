@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { Router } from '@angular/router';
@@ -51,41 +51,51 @@ export class CreateNewTrip {
   selectedPreferences: string[] = [];
 
   preferenceIdMap: { [key: string]: number } = {
-    ADVENTURE: 1,
-    SPIRITUAL: 2,
-    BEACHES: 3,
-    HIKING: 4,
-    TREKKING: 5,
-    HISTORICAL: 6,
+    'ADVENTURE': 1,
+    'SPIRITUAL': 2,
+    'BEACHES': 3,
+    'HIKING': 4,
+    'TREKKING': 5,
+    'HISTORICAL': 6,
     'COUPLE TRIP': 7,
-    NATURE: 8,
+    'NATURE': 8,
     'INDOOR ACTIVITY': 9,
-    WILDLIFE: 10,
-    SHOPPING: 11,
+    'WILDLIFE': 10,
+    'SHOPPING': 11,
     'CULTURAL EXPERIENCE': 12,
-    NIGHTLIFE: 13,
-    PHOTOGRAPHY: 14,
-    RELAXATION: 15,
+    'NIGHTLIFE': 13,
+    'PHOTOGRAPHY': 14,
+    'RELAXATION': 15,
     'FAMILY FRIENDLY': 16,
     'STREET FOOD': 17,
     'FINE DINING': 18,
     'CAFE & RESTAURANT': 19,
-    RESTAURANTS: 20,
+    'RESTAURANTS': 20,
   };
 
   //error message
-
   errorMessage: string = '';
 
   //generating message  and //error occured while genrating message
   generateMessage: string = '';
   isGenerating: boolean = false;
 
+  // progress bar properties.
+  generationProgress: number = 0;
+  elapsedSeconds: number = 0;
+  timeRemainingMessage: string = 'Estimated time: 15-25 seconds';
+  progressLabel: string ='Getting things ready...';
+
+  private progressInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly estimatedDuration = 45;
+
+
   minDate: string = '';
 
   constructor(
     private http: HttpClient,
     private router: Router,
+    private cdr: ChangeDetectorRef,
   ) {
     this.setMinimumDate();
   }
@@ -194,8 +204,10 @@ export class CreateNewTrip {
       return;
     }
 
+    this.errorMessage = '';
     this.isGenerating = true;
-    this.generateMessage = 'Your trip is being generate... Please wait.';
+    this.generateMessage = 'Please wait while we build your personalised itinerary.';
+    this.startGenerationProgress();
 
     const preferenceIds = this.selectedPreferences.map(
       (preference) => this.preferenceIdMap[preference],
@@ -235,6 +247,10 @@ export class CreateNewTrip {
             next: (intineraryResponse: any) => {
               console.log('Generated Itinerary:', intineraryResponse);
 
+             this.completeGenerationProgress();
+
+            // Keep the progress visible briefly before navigating.
+            setTimeout(() => {
               this.isGenerating = false;
 
               this.router.navigate(['/trip-dashboard/itinerary'], {
@@ -243,6 +259,7 @@ export class CreateNewTrip {
                   itinerary: intineraryResponse.itinerary,
                 },
               });
+            }, 800);
             },
 
             //Generate itinerary error
@@ -250,8 +267,11 @@ export class CreateNewTrip {
               console.error('Generate ITinerary Error:', error);
               console.error('Backend validation details:', error.error?.detail);
 
+              this.stopGenerationProgress();
               this.isGenerating = false;
-              this.generateMessage = 'Unable to generate your itinerary. Please try again.';
+              this.generationProgress - 0;
+              this.errorMessage = 'Unable to generate your itinerary. Please try again.';
+              this.generateMessage = '';
             },
           });
       },
@@ -263,10 +283,12 @@ export class CreateNewTrip {
         console.error('Backend validation details:', error.error?.detail);
 
         //Unlock button if Create Trip API fails
+        this.stopGenerationProgress();
 
         this.isGenerating = false;
-
-        this.generateMessage = 'Unable to create trip. Please try again.';
+        this.generationProgress =0 ;
+        this.errorMessage = 'Unable to create trip. Please try again.';
+        this.generateMessage = '';
       },
     });
 
@@ -277,5 +299,61 @@ export class CreateNewTrip {
     console.log('Travellers:', this.travellers);
     console.log('Budget:', this.budget);
     console.log('Preferences:', this.selectedPreferences);
+  }
+  private startGenerationProgress(): void {
+    this.stopGenerationProgress();
+
+    this.generationProgress = 5;
+    this.elapsedSeconds =0 ;
+    this.progressLabel ='Creating your Trip...';
+    this.timeRemainingMessage = 'Estimated time remaining : about 15 seconds';
+
+    this.progressInterval = setInterval(() => {
+      this.elapsedSeconds++;
+
+
+      if(this.generationProgress < 90) {
+        this.generationProgress = Math.min(
+          90,
+          this.generationProgress + (this.generationProgress <60 ? 2 : 1)
+        );
+      }
+
+      //update the current stage.
+      if(this.elapsedSeconds < 5) {
+        this.progressLabel = 'Creating your trip...';
+      } else if(this.elapsedSeconds <20) {
+        this.progressLabel = 'AI is planing your itinerary...';
+      } else {
+        this.progressLabel = 'Finding places and finalizing your plan...';
+      }
+
+      const remaining = Math.max(
+        1,
+        this.estimatedDuration - this.elapsedSeconds
+      );
+
+      this.timeRemainingMessage =
+        this.elapsedSeconds < this.estimatedDuration
+          ? 'Estimated time remainig: about ${remaining} seconds'
+          : 'Taking longer than expected> Please keep this page open...';
+
+      this.cdr.markForCheck();
+    }, 50);
+
+  }
+
+  private stopGenerationProgress(): void {
+    if (this.progressInterval !== null) {
+      clearInterval(this.progressInterval);
+      this.progressInterval = null;
+    }
+  }
+
+  private completeGenerationProgress(): void {
+    this.stopGenerationProgress();
+    this.generationProgress = 100;
+    this.progressLabel = 'Your itinerary is ready!';
+    this.timeRemainingMessage = 'Taking you to your itinerary...';
   }
 }

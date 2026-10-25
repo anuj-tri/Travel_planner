@@ -12,6 +12,9 @@ import { ModifyTrip } from './trip-dashboard/modify-trip/modify-trip';
 import { Profile } from './trip-dashboard/profile/profile';
 import { Itinerary } from './trip-dashboard/itinerary/itinerary';
 import { ViewItinerary } from './trip-dashboard/view-itinerary/view-itinerary';
+import { EditYourTrip } from './trip-dashboard/edit-your-trip/edit-your-trip';
+import { EditItinerary } from './trip-dashboard/edit-itinerary/edit-itinerary';
+import { authGuard } from './auth/auth.guard';
 
 
 
@@ -35,6 +38,7 @@ export const routes: Routes = [
     {
         path: ('trip-dashboard'),
         component: TripDashboard,
+        canActivate: [authGuard],
         children: [
             {
                 path: 'create-new-trip',
@@ -55,6 +59,16 @@ export const routes: Routes = [
             {
                 path:'modify-trip',
                 component: ModifyTrip
+            },
+            {
+                path: 'edit-your-trip/:tripId',
+                component: EditYourTrip
+
+            },
+            {
+                path: 'edit-itinerary/:tripId',
+                component: EditItinerary
+
             },
             {
                 path: 'profile',

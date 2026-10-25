@@ -83,6 +83,6 @@ export class ModifyTrip implements OnInit {
       return;
     }
 
-    this.router.navigate(['/trip-dashboard/modify-trip', tripId]);
+    this.router.navigate(['/trip-dashboard/edit-your-trip', tripId]);
   }
 }

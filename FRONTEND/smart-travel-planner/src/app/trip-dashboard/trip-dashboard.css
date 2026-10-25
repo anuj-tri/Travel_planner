@@ -62,6 +62,11 @@
   left: 0;
   top: 80px;
   padding: 35px 20px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
 }
 
 /*Sidebar-title*/
@@ -82,7 +87,8 @@
   flex-direction: column;
   gap: 18px;
 }
-.sidebar-menu a {
+.sidebar-menu a,
+.logout-button {
   display: flex;
   align-items: center;
   width: 100%;
@@ -91,20 +97,35 @@
 
   text-decoration: none;
   color: white;
+  border: none;
+  background-color: rgb(84, 82, 82);
 
   border-radius: 8px;
   font-size: 17px;
+  font-family: inherit;
+  text-align: left;
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-.sidebar-menu a {
-  background-color: rgb(84, 82, 82);
-}
 
-.sidebar-menu a:hover {
+.sidebar-menu a:hover,
+.logout-button:hover {
   background-color: rgb(34, 33, 33);
 }
 
+.sidebar-menu a.active-link{
+  background-color: rgb(34, 33, 33);
+  color:white;
+  font-weight: bold;
+  border-left: 10px solid whitesmoke;
+  border-right: 10px solid whitesmoke;
+  padding-left: 13px;
+}
+
+.logout-button{
+  margin-top:4px;
+}
 /*Menu icons*/
 
 .menu-icon {
@@ -126,4 +147,21 @@
   min-height: 100vh;
 
   background-color: #f5f7fa;
+}
+
+/* Top menu: Create, Saved, Modify */
+
+.top-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Bottom menu: Profile and Logout */
+
+.bottom-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: auto;
 }

@@ -1,6 +1,6 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from app.database import Base
-from sqlalchemy import String, Integer, ForeignKey, Text, Date
+from sqlalchemy import String, Integer, ForeignKey, Text, Date, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -80,3 +80,24 @@ class ItineraryPlace(Base):
         Integer, ForeignKey("places.place_id"), primary_key=True
     )
     visit_order: Mapped[int] = mapped_column(Integer)
+
+class RefreshToken(Base):
+    __tablename__= 'refresh_tokens'
+
+    refresh_token_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True,)
+    user_id: Mapped[int] = mapped_column(Integer,ForeignKey('users.user_id', ondelete ='CASCADE'), nullable=False, index=True,)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True,)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone = True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    expire_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable= False,
+    )
+
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable =True,
+    )

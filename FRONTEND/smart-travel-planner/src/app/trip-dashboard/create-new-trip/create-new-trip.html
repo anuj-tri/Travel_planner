@@ -88,7 +88,35 @@
 
       <!--Generate message-->
 
-      <div class="genration-message" *ngIf="isGenerating">{{ generateMessage }}</div>
+      <div class="generation-status" *ngIf="isGenerating">
+        <div class = 'generation-heading'>
+          <span class = 'loading-icon'>✈</span>
+          <div>
+            <h3> Crafting your perfect trip</h3>
+            <p>{{ generateMessage }}</p>
+          </div>
+        </div>
+
+        <div
+          class = 'progress-track'
+          role = 'progressbar'
+          [attr.aria-valuenow] = 'generationProgress'
+          aria-valuemin="0"
+          aria-valuemax = '100'
+          aria-label = "Trip generation progress"
+          >
+            <div class = "progress-fill" [style.width.%] ="generationProgress"></div>
+        </div>
+
+        <div class = "progress-details">
+          <span> {{ progressLabel }}</span>
+          <span> {{ generationProgress }}%</span>
+        </div>
+
+        <p class = 'estimated-time'>
+          <span>◷</span>{{ timeRemainingMessage }}
+        </p>
+      </div>
 
       <div class="generate-trip">
         <button type="button" (click)="generateTrip()" [disabled]="isGenerating">

@@ -154,7 +154,7 @@ export class ViewItinerary implements OnInit {
       Authorization: `Bearer ${token}`,
     });
 
-    const url = `http://127.0.0.1.8000/trips/${this.tripId}/complete`;
+    const url = `http://127.0.0.1:8000/trips/${this.tripId}/complete`;
 
     this.http.patch<any>(url, {}, { headers }).subscribe({
       next: (response) => {
@@ -170,7 +170,7 @@ export class ViewItinerary implements OnInit {
       error: (error) => {
         console.error('Failed to mark trip as completed:', error);
 
-        this.message = error.error?.details ?? 'Failed to mark trip as completd. Please try again.';
+        this.message = error.error?.detail ?? 'Failed to mark trip as completd. Please try again.';
 
         this.cdr.detectChanges();
       },
@@ -320,6 +320,10 @@ export class ViewItinerary implements OnInit {
     places.forEach((place: any, index: number) => {
       if (place.latitude === undefined || place.longitude === undefined) {
         console.warn('Coordinates missing for:', place.place_name);
+        console.log('Place data received by map:', place);
+        console.log('Latitude:', place.latitude);
+        console.log('Longitude:', place.longitude);
+
         return;
       }
 

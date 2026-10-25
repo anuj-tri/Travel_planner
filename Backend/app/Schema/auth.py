@@ -22,10 +22,12 @@ class LoginRequest(BaseModel):
     password: str
 
 
+
 class LoginResponse(BaseModel):
     message: str
     email: EmailStr
     access_token: str
+    refresh_token: str
 
 
 # FORGOT PASSWORD REQUEST MODEL
@@ -74,3 +76,12 @@ class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
     confirm_new_password: str
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+class LogoutRequest(BaseModel):
+    refresh_token: str
+
+class ValidateResetTokenRequest(BaseModel):
+    token: str

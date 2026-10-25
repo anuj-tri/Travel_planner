@@ -1,8 +1,9 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+
+import { AuthService } from '../auth.service';
 
 @Component({
   selector: 'app-login',
@@ -18,7 +19,7 @@ export class Login {
   errorMessage: string = '';
 
   constructor(
-    private http: HttpClient,
+    private authService: AuthService,
     private router: Router,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -37,24 +38,32 @@ export class Login {
       password: this.password,
     };
 
-    this.http.post('http://localhost:8000/auth/login', loginData).subscribe({
-      next: (response: any) => {
-        console.log('Login Succesful:', response);
-
-        localStorage.setItem('access_token', response.access_token);
-
-        alert('login Successful');
+    this.authService.login(loginData).subscribe({
+      next: (response) => {
+        console.log('Login Successful');
 
         this.router.navigate(['/trip-dashboard/create-new-trip']);
       },
 
       error: (error) => {
-        console.error('login failed:', error);
-        console.log('Status:', error.status);
-        console.log('URL:', error.url);
-        console.log('Error body:', error.error);
+        console.error('Login failed:', error);
 
-        this.errorMessage = 'Invalid email or password.';
+        const detail =
+          error?.error?.detail ??
+          error?.error?.message ??
+          '';
+
+        if (
+          typeof detail ==='string' && /email.*(not registered|not found|does not exist)/i.test(detail)
+        ) {
+          this.errorMessage ='Email is not registered';
+        } else if (
+          typeof detail === 'string' &&/(incorrect password|invalid password|wrong password)/i.test(detail)
+        ){
+          this.errorMessage= 'Inccorect password.';
+        } else {
+          this.errorMessage = 'Invalid email or passsword.';
+        }
         this.cdr.detectChanges();
       },
     });

@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 from google import genai
 
 import json
+import time
+from fastapi import HTTPException, status
 
 load_dotenv()
 
@@ -101,16 +103,53 @@ MAIN ITINERARY REQUIREMENTS
     itinerary focused on that destination and nearby attractions.
     Do not select attractions from distant cities.
 
-11. The trip duration must be considered when planning the itinerary.
+
+11. Every itinerary day must have a clear intended city, state, and country.
+
+12. Every place in every itinerary option must include these fields:
+    - place_name
+    - city
+    - state
+    - country
+
+13. The city, state, and country must identify the actual location
+    of the attraction, not merely the trip's starting or ending
+    destination.
+
+14. For trips involving different cities, assign attractions to
+    the city where they are actually located. Do not mix distant
+    cities in one day's itinerary unless the travel plan realistically
+    accounts for the journey.
+
+15. Use the official or commonly recognized attraction name.
+    Do not append the city or country to place_name itself.
+    Return location information in separate fields.
+
+16. If the exact city, state, or country is uncertain, do not invent
+    a location. Use the most reliable location information available.
+
+    16A. Every place object must contain non-empty values for
+    "place_name", "city", "state", and "country".
+
+    16B. Every object in "optional_suggestions" must also contain
+     non-empty values for "place_name", "city", "state", and "country".
+
+    16C. If the location of an attraction cannot be confidently determined,
+      choose another attraction whose location can be identified reliably.
+
+    16D. Before returning the JSON, verify that every place in all three
+    options and every optional suggestion contains all required location fields.
+
+17. The trip duration must be considered when planning the itinerary.
     Do not suggest an unrealistic number of places for a single day.
 
-12. Consider the user's selected preferences when choosing places and
+18. Consider the user's selected preferences when choosing places and
     activities.
 
-13. Avoid unnecessary repetition of the same attraction across options
+19. Avoid unnecessary repetition of the same attraction across options
     and days.
 
-14. Each day's 3 options must represent different budget levels:
+20. Each day's 3 options must represent different budget levels:
 
     OPTION 1:
     The most expensive / premium option of the three.
@@ -126,12 +165,12 @@ MAIN ITINERARY REQUIREMENTS
     Prefer free or low-entry-fee attractions and activities while still
     providing a useful and enjoyable itinerary.
 
-15. The budget difference between the three options should be
+21. The budget difference between the three options should be
     meaningful.
 
     Do not make all three options almost identical in total cost.
 
-16. Consider the user's TOTAL trip budget across ALL days.
+22. Consider the user's TOTAL trip budget across ALL days.
 
     The selected options across multiple days should remain reasonably
     aligned with the user's total budget.
@@ -148,12 +187,12 @@ MAIN ITINERARY REQUIREMENTS
     resulting total should consume only a smaller portion of the user's
     budget.
 
-17. The three options are independent choices for each day.
+23. The three options are independent choices for each day.
 
     Consider the combined cost if the same option level is selected
     across all days.
 
-18. Also account for mixed selections across days.
+24. Also account for mixed selections across days.
 
     For example:
 
@@ -164,13 +203,13 @@ MAIN ITINERARY REQUIREMENTS
     Such a combination should still remain reasonably appropriate for
     the user's total budget.
 
-19. NEVER force an expensive activity into an option merely to make that
+25. NEVER force an expensive activity into an option merely to make that
     option expensive.
 
     The activities and attractions must still be relevant to the user's
     preferences and destination.
 
-20. Activities involving special experiences must have realistic
+26. Activities involving special experiences must have realistic
     estimated prices.
 
     For example, if an option includes scuba diving, do not assume an
@@ -184,15 +223,15 @@ MAIN ITINERARY REQUIREMENTS
     Use a realistic estimated cost per person when such an activity is
     included.
 
-21. When an activity has a variable or package-based price, provide a
+27. When an activity has a variable or package-based price, provide a
     reasonable estimated price per person rather than an obviously
     unrealistic price.
 
-22. Weekend and high-demand activities may cost more than normal.
+28. Weekend and high-demand activities may cost more than normal.
     Consider this when estimating prices for activities such as scuba
     diving, adventure activities, water sports and similar experiences.
 
-23. Do not recommend an expensive activity when a suitable lower-cost
+29. Do not recommend an expensive activity when a suitable lower-cost
     alternative can provide a similar experience and the user's budget
     is limited.
 
@@ -389,6 +428,9 @@ Use exactly this general structure:
                     "places": [
                         {{
                             "place_name": "Place name",
+                            "city": "City name",
+                            "state": "State Name",
+                            "country": "country name",
                             "activity": "Activity",
                             "approximate_time": "2 hours",
                             "entry_fee_per_person": 500
@@ -406,6 +448,9 @@ Use exactly this general structure:
                     "places": [
                         {{
                             "place_name": "Place name",
+                            "city": "City name",
+                            "state": "State Name",
+                            "country": "country name",
                             "activity": "Activity",
                             "approximate_time": "2 hours",
                             "entry_fee_per_person": 300
@@ -423,6 +468,9 @@ Use exactly this general structure:
                     "places": [
                         {{
                             "place_name": "Place name",
+                            "city": "City name",
+                            "state": "State Name",
+                            "country": "country name",
                             "activity": "Activity",
                             "approximate_time": "3 hours",
                             "entry_fee_per_person": 0
@@ -438,8 +486,11 @@ Use exactly this general structure:
 
     "optional_suggestions": [
         {{
-            "recommended_day": "Day 1"
+            "recommended_day": "Day 1",
             "place_name": "Suggested place",
+            "city": "City name",
+            "state": "State Name",
+            "country": "country name",
             "reason": "Short reason why the traveller may consider it",
             "approximate_time": "2 hours",
             "entry_fee_per_person": 300
@@ -448,7 +499,136 @@ Use exactly this general structure:
 }}
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.5-flash-lite", contents=prompt
+
+    models_to_try = [
+        "gemini-3.5-flash-lite",
+        "gemini-3.6-flash",
+        "gemini-3.8-flash",
+    ]
+
+    last_error = None
+    for model in models_to_try:
+        print(f"Trying Gemini Model: {model}")
+
+        #try each model up to 3 times.
+        for attempt in range(1,4):
+            try:
+                response = client.models.generate_content(
+                    model = model,
+                    contents= prompt,
+                )
+
+                if not response.text:
+                    raise ValueError(
+                        'Gemini returned an empty response.'
+                    )
+
+                #Ensure the response is valid JSON before returning.
+                itinerary = json.loads(response.text)
+
+                print(
+                    f"Itinerary generated successfully"
+                    f"using {model}."
+                )
+
+                return itinerary
+            except json.JSONDecodeError as e:
+                last_error = e
+
+                print (
+                    f"{model}: Invalid JSON on attempt"
+                    f"{attempt}/3."
+                )
+
+                print (
+                    f'JSON error at line {e.lineno},'
+                    f'column {e.colno}: {e.msg}'
+                )
+
+                #print the response around the invalid json
+                lines = response.text.splitlines()
+                start = max(0, e.lineno -3)
+                end = min(len(lines), e.lineno + 2)
+
+                for i in range (start, end):
+                    print(f"Line {i+1}: {lines[1]}")
+
+            except Exception as e:
+                last_error = e
+
+                error_message = str(e).lower()
+
+                error_code = (
+                    getattr(e, 'code', None)
+                    or getattr(e, 'status_code', None)
+                )
+
+                # errors that may be temporary
+                temporary_error = (
+                    error_code in (408, 429, 500, 502, 503, 504)
+                    or any(
+                        keyword in error_message
+                        for keyword in (
+                            'timeout',
+                            'timed out',
+                            'connection',
+                            'resource_exhausted',
+                            'service unavailable',
+                            'internal server error',
+                            'overloaded',
+                            'temporarily unavailable',
+                        )
+                    )
+                )
+                # if the model is inavailble, try the next model.
+                model_unavilable =(
+                    error_code == 404
+                    or 'model not found' in error_message
+                    or 'not supported' in error_message
+                )
+                if model_unavilable:
+                    print(
+                        f"{model} is unavilable."
+                        "Switching to the next model."
+                    )
+                    break
+                #do not repeatedly retry prermanent errors.
+                if not temporary_error:
+                    print(f"Non-retryable Gemini error: {e}")
+
+                    raise HTTPException (
+                        status_code = status.HTTP_502_BAD_GATEWAY,
+                        detail = ("The itinerary service could not "
+                            "process your request. Please try again "
+                            "later."
+                        ),
+                    )from e
+                print (
+                    f"{model}: Temporary faliure on attempt"
+                    f"{attempt}/3: {e}"
+                )
+
+            #wait 2 secods , then 4 secods before retries.
+            if attempt<3:
+                delay = 2 ** attempt
+                print(f" Retrying {model} in {delay} seconds...")
+                time.sleep(delay)
+
+        print(
+            f"{model} failed after its attempts."
+            'Moving to the next model.'
+        )
+    #all model failed
+    print(f" All Gemini models failed. Last error: {last_error}")
+
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail = (
+            "Our AI Ittinerary service is experiencing hegh demand"
+            "right now. Pleace try again in 2 minutes."
+        )
     )
-    return json.loads(response.text)
+
+
+
+

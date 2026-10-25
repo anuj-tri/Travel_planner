@@ -11,6 +11,9 @@ from app.Schema.auth import (
     UpdateProfileRequest,
     UpdateProfileResponse,
     ChangePasswordRequest,
+    RefreshTokenRequest,
+    LogoutRequest,
+    ValidateResetTokenRequest,
 )
 
 from app.database import get_db
@@ -24,6 +27,9 @@ from app.services.auth_service import (
     get_current_user_service,
     update_profile_service,
     change_password_service,
+    refresh_token_service,
+    logout_service,
+    validate_reset_token_service,
 )
 
 from app.security import get_current_user
@@ -47,6 +53,24 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     return login_service(request, db)
 
 
+# REFRESH TOKEN
+@router.post("/refresh", status_code=status.HTTP_200_OK)
+def refresh_token(
+    request: RefreshTokenRequest,
+    db: Session = Depends(get_db),
+):
+    return refresh_token_service(request, db)
+
+
+# LOGOUT
+@router.post("/logout", status_code=status.HTTP_200_OK)
+def logout(
+    request: LogoutRequest,
+    db: Session = Depends(get_db),
+):
+    return logout_service(request, db)
+
+
 # FORGOIT PASSWORD
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
@@ -61,6 +85,7 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     return reset_password_service(request, db)
 
 
+# gets the current user's profile
 @router.get("/me", response_model=CurrentUserResponse)
 def get_current_user_detail(
     current_user=Depends(get_current_user),
@@ -68,6 +93,7 @@ def get_current_user_detail(
     return get_current_user_service(current_user)
 
 
+# updates the profile
 @router.patch("/me", response_model=UpdateProfileResponse)
 def update_profile_user(
     request: UpdateProfileRequest,
@@ -77,6 +103,7 @@ def update_profile_user(
     return update_profile_service(request, current_user, db)
 
 
+# chnages the password
 @router.patch("/me/change-password")
 def change_current_user_password(
     request: ChangePasswordRequest,
@@ -84,3 +111,10 @@ def change_current_user_password(
     db: Session = Depends(get_db),
 ):
     return change_password_service(request, current_user, db)
+
+
+@router.post("/validate-reset-token", status_code=status.HTTP_200_OK)
+def validate_reset_token(
+    request: ValidateResetTokenRequest, db: Session = Depends(get_db)
+):
+    return validate_reset_token_service(request, db)

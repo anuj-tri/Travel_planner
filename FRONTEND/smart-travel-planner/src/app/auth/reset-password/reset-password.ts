@@ -19,15 +19,45 @@ export class ResetPassword {
   message: string = '';
   errorMessage: string = '';
 
+  isValidating = true;
+  isLinkValid = false;
+
   constructor(
     private http: HttpClient,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
   ) {
-    //Get the jwt token from URL
+    //Get the password reset token from URL
     this.route.queryParams.subscribe((params) => {
       this.token = params['token'] || '';
+
+      if (!this.token) {
+        this.isValidating = false;
+        this.isLinkValid = false;
+        return;
+      }
+      this.validateResetToken();
+    });
+  }
+  validateResetToken(): void{
+    this.isValidating = true;
+    this.isLinkValid = false;
+
+    this.http.post<{ valid: boolean}>(
+      'http://localhost:8000/auth/validate-reset-token',
+      { token: this.token}
+    ).subscribe ({
+      next: (response) => {
+        this.isLinkValid = response.valid === true;
+        this.isValidating = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isLinkValid = false;
+        this.isValidating = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -35,6 +65,10 @@ export class ResetPassword {
     //clear the previous messages
     this.message = '';
     this.errorMessage = '';
+
+    if (this.isValidating || !this.isLinkValid) {
+      return;
+    }
 
     if (!this.newPassword && !this.confirmPassword) {
       this.errorMessage = 'Please enter your new password and confirm your password.';
@@ -102,5 +136,8 @@ export class ResetPassword {
   }
   goToLogin() {
     this.router.navigate(['/login']);
+  }
+  goToForgotPassword(): void {
+    this.router.navigate(['/forgot-password']);
   }
 }

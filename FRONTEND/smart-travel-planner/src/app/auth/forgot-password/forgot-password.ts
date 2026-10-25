@@ -50,11 +50,16 @@ export class ForgotPassword {
         },
 
         error: (error) => {
-          console.error('forgot password failed:', error);
+          console.error('Forgot password failed:', error);
           console.log('Status:', error.status);
           console.log('Error body:', error.error);
-
-          this.errorMessage = 'Email does not exist,';
+          if(error.status === 404){
+            this.errorMessage = 'Please enter a registered email address.';
+          } else {
+            this.errorMessage = 'Unable to send the reset link. Please try again.';
+          }
+          this.message =''
+          this.cdr.detectChanges();
         },
       });
   }
