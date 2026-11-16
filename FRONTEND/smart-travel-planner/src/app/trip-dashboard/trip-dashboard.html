@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><Trip Dashboard></title>
+  </head>
+  <body>
+    <div class="trip-dashboard">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="website-name">
+          <h2>SMART TRAVEL PLANNER</h2>
+        </div>
+
+        <div class="user-info">
+          <span class="user-icon">◉</span>
+          <span>{{ firstName }} {{ lastName }}</span>
+        </div>
+
+        <!-- Left Sidebar -->
+      </header>
+      <div class="sidebar">
+        <div class="sidebar-menu top-menu">
+          <a routerLink="/trip-dashboard/create-new-trip" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> CREATE NEW TRIP</a>
+
+          <a routerLink="/trip-dashboard/saved-trips" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> SAVED TRIP</a>
+
+          <a routerLink="/trip-dashboard/modify-trip" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> MODIFY TRIP</a>
+        </div>
+
+        <!-- Bottom menue-->
+
+        <div class ="sidebar-menu bottom-menu">
+
+          <a routerLink="/trip-dashboard/profile" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> PROFILE</a>
+
+          <button class ="logout-button" type ="button" (click)="logout()">LOGOUT</button>
+        </div>
+      </div>
+
+      <!--Right Side : Dynamic Page-->
+
+      <div class="main-content">
+        <router-outlet></router-outlet>
+      </div>
+    </div>
+  </body>
+</html>

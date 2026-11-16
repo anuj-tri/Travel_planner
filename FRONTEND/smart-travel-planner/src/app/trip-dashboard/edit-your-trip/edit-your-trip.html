@@ -1,0 +1,271 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Your Trip</title>
+  </head>
+
+  <body>
+    <div class="create-trip-page">
+      <div class="back-button-container">
+        <button
+          type="button"
+          class="back-button"
+          (click)="goBackToModifyTrip()"
+        >
+          <span class="back-arrow">←</span>
+          Back to Modify Trip
+        </button>
+      </div>
+
+      <!-- Page Heading -->
+      <div class="page-heading">
+        <h1>EDIT YOUR TRIP</h1>
+        <p>UPDATE YOUR TRIP DETAILS AND GENERATE A NEW AI-POWERED ITINERARY</p>
+      </div>
+
+      <!-- Trip Details -->
+      <div class="trip-details">
+
+        <!-- Destination Row -->
+        <div class="destination-group">
+
+          <!-- Starting Destination -->
+          <div class="form-group">
+            <label for="starting-destination">STARTING DESTINATION (you want to discover)</label>
+            <input
+              type="text"
+              id="starting-destination"
+              name="startingDestination"
+              [(ngModel)]="startingDestination"
+              (ngModelChange)="clearFieldError('startingDestination')"
+              placeholder="Enter starting destination"
+              [disabled]="editMode === 'restricted_edit'"
+              [attr.aria-invalid]="!!fieldErrors['startingDestination']"
+              aria-describedby="starting-destination-error"
+            />
+
+            <p
+              class="field-error"
+              id="starting-destination-error"
+              *ngIf="fieldErrors['startingDestination']"
+            >
+              {{ fieldErrors['startingDestination'] }}
+            </p>
+          </div>
+
+          <!-- Swap Destinations -->
+          <div class="swap-destination">
+            <button
+              type="button"
+              class="swap-button"
+              (click)="swapDestinations()"
+              title="Swap starting and ending destinations"
+              aria-label="Swap starting and ending destinations"
+              [disabled]="editMode === 'restricted_edit'"
+            >
+              ⇄
+            </button>
+          </div>
+
+          <!-- Ending Destination -->
+          <div class="form-group">
+            <label for="ending-destination">ENDING DESTINATION (you want to discover)</label>
+            <input
+              type="text"
+              id="ending-destination"
+              name="endingDestination"
+              [(ngModel)]="endingDestination"
+              (ngModelChange)="clearFieldError('endingDestination')"
+              placeholder="Enter ending destination"
+              [attr.aria-invalid]="!!fieldErrors['endingDestination']"
+              aria-describedby="ending-destination-error"
+            />
+
+            <p
+              class="field-error"
+              id="ending-destination-error"
+              *ngIf="fieldErrors['endingDestination']"
+            >
+              {{ fieldErrors['endingDestination'] }}
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Dates, Budget and Travellers -->
+        <div class="details-grid">
+
+          <!-- Start Date -->
+          <div class="form-group">
+            <label for="start-date">START DATE</label>
+            <input
+              type="date"
+              id="start-date"
+              name="startDate"
+              [(ngModel)]="startDate"
+              (ngModelChange)="clearFieldError('startDate'); clearFieldError('endDate')"
+              [min]="minDate"
+              [disabled]="editMode === 'restricted_edit'"
+              [attr.aria-invalid]="!!fieldErrors['startDate']"
+              aria-describedby="start-date-error"
+            />
+
+            <p
+              class="field-error"
+              id="start-date-error"
+              *ngIf="fieldErrors['startDate']"
+            >
+              {{ fieldErrors['startDate'] }}
+            </p>
+          </div>
+
+          <!-- End Date -->
+          <div class="form-group">
+            <label for="end-date">END DATE</label>
+            <input
+              type="date"
+              id="end-date"
+              name="endDate"
+              [(ngModel)]="endDate"
+              (ngModelChange)="clearFieldError('endDate')"
+              [min]="editMode === 'restricted_edit' ? getTomorrowDate() : (startDate || minDate)"
+              [attr.aria-invalid]="!!fieldErrors['endDate']"
+              aria-describedby="end-date-error"
+            />
+
+            <p
+              class="field-error"
+              id="end-date-error"
+              *ngIf="fieldErrors['endDate']"
+            >
+              {{ fieldErrors['endDate'] }}
+            </p>
+          </div>
+
+          <!-- Budget -->
+          <div class="form-group">
+            <label for="budget">TOTAL BUDGET OF THE TRIP</label>
+            <input
+              type="number"
+              id="budget"
+              name="budget"
+              [(ngModel)]="budget"
+              (ngModelChange)="clearFieldError('budget')"
+              placeholder="Enter your budget"
+              min="2500"
+              step="1"
+              [attr.aria-invalid]="!!fieldErrors['budget']"
+              aria-describedby="budget-error"
+            />
+
+            <p
+              class="field-error"
+              id="budget-error"
+              *ngIf="fieldErrors['budget']"
+            >
+              {{ fieldErrors['budget'] }}
+            </p>
+          </div>
+
+          <!-- Number of Travellers -->
+          <div class="form-group">
+            <label for="travellers">NO. OF TRAVELLERS</label>
+            <input
+              type="number"
+              id="travellers"
+              name="travellers"
+              [(ngModel)]="travellers"
+              (ngModelChange)="clearFieldError('travellers')"
+              placeholder="Number of travellers"
+              min="1"
+              step="1"
+              [attr.aria-invalid]="!!fieldErrors['travellers']"
+              aria-describedby="travellers-error"
+            />
+
+            <p
+              class="field-error"
+              id="travellers-error"
+              *ngIf="fieldErrors['travellers']"
+            >
+              {{ fieldErrors['travellers'] }}
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Preferences -->
+      <div class="preferences">
+        <h2>PREFERENCES</h2>
+
+        <div class="preference-options">
+          <button
+            type="button"
+            *ngFor="let preference of preferences"
+            (click)="togglePreference(preference)"
+            [class.selected]="isPreferenceSelected(preference)"
+          >
+            {{ preference }}
+          </button>
+        </div>
+      </div>
+
+      <!-- General API or Form Error -->
+      <div
+        class="error-message"
+        *ngIf="errorMessage"
+        role="alert"
+        aria-live="polite"
+      >
+        {{ errorMessage }}
+      </div>
+
+      <!-- Generation Message -->
+      <div class="generation-status" *ngIf="isGenerating "role="status" aria-live="polite">
+        <div class ="generation-heading">
+          <span class = "loading-icon">✈</span>
+          <div>
+            <h3> Crafting your updated trip</h3>
+            <p> {{ generateMessage }} </p>
+          </div>
+        </div>
+
+        <div
+          class ="progress-track"
+          role = "progressbar"
+          [attr.aria-valuenow] ="generationProgress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-label ="Updated itinerary generation progress"
+        >
+          <div class = "progress-fill" [style.width.%] = "generationProgress"></div>
+        </div>
+
+        <div class = "progress-details">
+          <span> {{ progressLabel }}</span>
+          <span> {{ generationProgress }}%</span>
+        </div>
+        <p class = "estimated-time">
+          <span>◷</span> {{ timeRemainingMessage }}
+        </p>
+
+      </div>
+
+      <!-- Generate New Trip Button -->
+      <div class="generate-trip">
+        <button
+          type="button"
+          (click)="generateTrip()"
+          [disabled]="isLoading || isGenerating || !hasChanges"
+        >
+          {{ isGenerating ? 'GENERATING NEW TRIP...' : 'GENERATE NEW TRIP' }}
+        </button>
+      </div>
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,325 @@
+
+/* Main page */
+.modify-trips-page {
+  min-height: 100%;
+  padding: 32px;
+  background-color: whitesmoke;
+  box-sizing: border-box;
+}
+
+/* Page heading */
+.page-heading {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.page-heading h1 {
+  margin: 0 0 8px;
+  color: black;
+  font-family: Arial, sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.page-heading p {
+  margin: 0;
+  color: gray;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+/* Status filter buttons */
+.trip-filters {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto 28px;
+}
+
+.filter-button {
+  padding: 11px 22px;
+  color: midnightblue;
+  background-color: white;
+  border: 1px solid lightgray;
+  border-radius: 24px;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.filter-button:hover {
+  background-color: aliceblue;
+  border-color: royalblue;
+}
+
+.filter-button.active {
+  color: white;
+  background-color: midnightblue;
+  border-color: midnightblue;
+  box-shadow: 0 3px 8px lightgray;
+}
+
+.filter-button:focus-visible {
+  outline: 3px solid royalblue;
+  outline-offset: 3px;
+}
+
+
+/* Trip list */
+.modify-trips-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Trip card */
+.trip-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 26px;
+  background-color: white;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px lightgray;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s ease;
+}
+
+.trip-card:hover {
+  box-shadow: 0 6px 16px silver;
+}
+
+/* Trip information */
+.trip-information {
+  flex: 1;
+  min-width: 0;
+}
+
+.trip-destination h2 {
+  margin: 0 0 18px;
+  color: black;
+  font-family: Arial, sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* Trip details */
+.trip-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 175px;
+  min-height: 62px;
+  padding: 10px 14px;
+  background-color: aliceblue;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.detail-label {
+  color: gray;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.detail-item span:last-child {
+  color: midnightblue;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Status and button */
+.trip-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+/* Status badge */
+.trip-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 90px;
+  padding: 10px 14px;
+  border-radius: 24px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Upcoming status */
+.status-upcoming {
+  color: white;
+  background-color: royalblue;
+}
+
+/* Ongoing status */
+.status-ongoing {
+  color: white;
+  background-color: seagreen;
+}
+
+/* Missed status */
+.status-missed {
+  color: white;
+  background-color: rgb(226, 69, 69);
+}
+
+/* Modify button */
+.modify-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 145px;
+  padding: 13px 18px;
+  color: white;
+  background-color: midnightblue;
+  border: none;
+  border-radius: 8px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.modify-button:hover {
+  background-color: darkslateblue;
+}
+
+.modify-button:focus-visible {
+  outline: 3px solid royalblue;
+  outline-offset: 3px;
+}
+
+/* Loading, empty, and error messages */
+.loading,
+.no-trip,
+.error-message {
+  max-width: 1200px;
+  margin: 24px auto;
+  padding: 28px;
+  background-color: white;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 3px 10px lightgray;
+  box-sizing: border-box;
+}
+
+.loading h2,
+.no-trip h2 {
+  margin-top: 0;
+  font-family: Arial, sans-serif;
+}
+
+.loading p,
+.no-trip p {
+  color: gray;
+  font-family: Arial, sans-serif;
+}
+
+.error-message {
+  color: firebrick;
+}
+
+/* Tablet layout */
+@media (max-width: 950px) {
+  .modify-trips-page {
+    padding: 24px;
+  }
+
+  .trip-card {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .trip-action {
+    justify-content: flex-start;
+  }
+
+  .detail-item {
+    flex: 1;
+    min-width: 140px;
+  }
+}
+
+/* Mobile layout */
+@media (max-width: 600px) {
+  .modify-trips-page {
+    padding: 20px 12px;
+  }
+
+  .page-heading h1 {
+    font-size: 24px;
+  }
+
+  .page-heading p {
+    font-size: 12px;
+  }
+
+  .trip-card {
+    padding: 18px;
+  }
+
+  .trip-destination h2 {
+    font-size: 18px;
+  }
+
+  .trip-details {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .detail-item {
+    width: 100%;
+  }
+
+  .trip-action {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .modify-button {
+    width: 100%;
+  }
+  .trip-filters {
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .filter-button {
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+
+}

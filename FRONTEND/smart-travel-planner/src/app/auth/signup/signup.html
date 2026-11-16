@@ -1,0 +1,216 @@
+<div class="signup-page">
+  <div class="signup-box">
+    <h1><strong>Create an Account</strong></h1>
+
+    <p class="subtitle">Join Smart Travel Planner and start your journey</p>
+
+    <form (ngSubmit)="signup()" novalidate>
+      <!-- First name -->
+      <div class="form-group">
+        <label for="firstName"><strong>First Name:</strong></label>
+        <input
+          id="firstName"
+          type="text"
+          name="firstName"
+          [(ngModel)]="firstName"
+          (ngModelChange)="clearServerError()"
+          placeholder="Enter your first name..."
+          autocomplete="given-name"
+          required
+          [class.invalid]="firstNameError"
+          [disabled]="isSubmitting"
+        />
+        <p *ngIf="firstNameError" class="field-error">
+          {{ firstNameError }}
+        </p>
+      </div>
+
+      <!-- Last name -->
+      <div class="form-group">
+        <label for="lastName"><strong>Last Name:</strong></label>
+        <input
+          id="lastName"
+          type="text"
+          name="lastName"
+          [(ngModel)]="lastName"
+          (ngModelChange)="clearServerError()"
+          placeholder="Enter your last name..."
+          autocomplete="family-name"
+          required
+          [class.invalid]="lastNameError"
+          [disabled]="isSubmitting"
+        />
+        <p *ngIf="lastNameError" class="field-error">
+          {{ lastNameError }}
+        </p>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email"><strong>Email:</strong></label>
+        <input
+          id="email"
+          type="email"
+          name="email"
+          [(ngModel)]="email"
+          (ngModelChange)="clearServerError()"
+          placeholder="name@gmail.com"
+          autocomplete="email"
+          required
+          [class.invalid]="emailError"
+          [disabled]="isSubmitting"
+        />
+        <p *ngIf="emailError" class="field-error">
+          {{ emailError }}
+        </p>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password"><strong>Password:</strong></label>
+
+        <div class="password-wrapper">
+          <input
+            id="password"
+            [type]="showPassword ? 'text' : 'password'"
+            name="password"
+            [(ngModel)]="password"
+            (ngModelChange)="clearServerError()"
+            placeholder="At least 8 characters"
+            autocomplete="new-password"
+            required
+            minlength="8"
+            [class.invalid]="passwordError"
+            [disabled]="isSubmitting"
+          />
+
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="showPassword = !showPassword"
+            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            [disabled]="isSubmitting"
+          >
+            {{ showPassword ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+
+        <p class="field-hint"></p>
+        <p *ngIf="passwordError" class="field-error">
+          {{ passwordError }}
+        </p>
+      </div>
+
+      <!-- Confirm password -->
+      <div class="form-group">
+        <label for="confirmPassword">
+          <strong>Confirm Password:</strong>
+        </label>
+
+        <div class="password-wrapper">
+          <input
+            id="confirmPassword"
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            name="confirmPassword"
+            [(ngModel)]="confirmPassword"
+            (ngModelChange)="clearServerError()"
+            placeholder="Confirm your password..."
+            autocomplete="new-password"
+            required
+            [class.invalid]="confirmPasswordError"
+            [disabled]="isSubmitting"
+          />
+
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="showConfirmPassword = !showConfirmPassword"
+            [attr.aria-label]="showConfirmPassword ? 'Hide password' : 'Show password'"
+            [disabled]="isSubmitting"
+          >
+            {{ showConfirmPassword ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+
+        <p *ngIf="confirmPasswordError" class="field-error">
+          {{ confirmPasswordError }}
+        </p>
+      </div>
+
+      <!-- General server error -->
+      <div *ngIf="errorMessage" class="error-message" role="alert" aria-live="polite">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Success message -->
+      <div *ngIf="message" class="success-message" role="status" aria-live="polite">
+        {{ message }}
+      </div>
+      <br />
+
+      <button class="signup-btn" type="submit" [disabled]="isSubmitting || !!message">
+        {{ isSubmitting ? 'Creating account...' : 'Sign Up' }}
+      </button>
+
+      <p class="login-prompt">
+        Already have an account?
+        <button class="login-btn" type="button" (click)="goToLogin()" [disabled]="isSubmitting">
+          Login
+        </button>
+      </p>
+    </form>
+
+    <!-- Email Already Registered Popup -->
+    <div
+      *ngIf="showEmailExistsPopup"
+      class="popup-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="email-popup-title"
+    >
+      <div class="popup-box">
+
+        <h2 id="email-popup-title">Email Already Registered!</h2>
+
+        <p>
+          This email is already registered with us.
+          Please use Sign In to access your account.
+        </p>
+
+        <p>
+          If you forgot your password, use Forgot Password
+          to generate a new password.
+        </p>
+
+        <div class="popup-buttons">
+
+          <button
+            type="button"
+            class="popup-btn"
+            (click)="goToLogin()"
+          >
+            ♙ Sign In
+          </button>
+
+          <button
+            type="button"
+            class="popup-btn"
+            (click)="goToForgotPassword()"
+          >
+            🔒 Forgot Password
+          </button>
+
+          <button
+            type="button"
+            class="popup-btn use-email-btn"
+            (click)="useAnotherEmail()"
+          >
+            ✎ Use Another Email
+          </button>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

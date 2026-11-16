@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Itinaries</title>
+  </head>
+  <body>
+    <div class="itinerary-page">
+      <div class="trip-header">
+        <h1>Your Trip Itinerary</h1>
+        <p>
+          {{ itineraryData?.trip_summary?.starting_destination }} →
+          {{ itineraryData?.trip_summary?.ending_destination }}
+        </p>
+      </div>
+
+      <div class="trip-details">
+        <div class="details-item">
+          <span class="detail-label">Dates</span>
+          <span>
+            = {{ itineraryData?.trip_summary?.start_date }} →
+            {{ itineraryData?.trip_summary?.end_date }}
+          </span>
+        </div>
+        <div class="details-item">
+          <span class="detail-label">Travellers</span>
+          <span> = {{ itineraryData?.trip_summary?.number_of_travellers }} </span>
+        </div>
+        <div class="details-item">
+          <span class="detail-label">Budget</span>
+          <span> = ₹{{ itineraryData?.trip_summary?.budget }} </span>
+        </div>
+      </div>
+    </div>
+
+    <!--current day data with 3 options -->
+
+    <div class="day-selection" *ngIf="itineraryData?.days?.length">
+      <div class="day-heading">
+        <h2>Day {{ itineraryData.days[currentDayIndex].day_number }}</h2>
+        <p>Choose your preferred itineraray for this day</p>
+      </div>
+
+      <!-- three options -->
+
+      <div class="options-container">
+        <div
+          class="option-card"
+          *ngFor="let option of itineraryData.days[currentDayIndex].options"
+          (click)="selectOption(option.option_number)"
+          [class.selected]="isOptionSelected(option.option_number)"
+        >
+          <!--Option header -->
+          <div class="option-header">
+            <span class="option-number"> OPTION {{ option.option_number }} </span>
+
+            <h3>
+              {{ option.option_name }}
+            </h3>
+          </div>
+
+          <!--places -->
+
+          <div class="places-container">
+            <div class="place" *ngFor="let place of option.places">
+              <div class="place-name">
+                {{ place.place_name }}
+              </div>
+
+              <div class="place-activity">
+                {{ getActivityText(place.activity) }}
+                <span class="price-warning" *ngIf="hasPriceWarning(place.activity)">
+                  * Price may vary depending on demand, weekdays, weekends, season, and
+                  availability.
+                </span>
+              </div>
+
+              <div class="place-time">
+                {{ place.approximate_time }}
+              </div>
+
+              <div class="place-fee">Entry Fee: ₹{{ place.entry_fee_per_person }}/person</div>
+            </div>
+          </div>
+
+          <!-- option summary -->
+
+          <div class="option-summary">
+            <div>
+              <span>Duration</span>
+              <strong>
+                {{ option.estimated_duration }}
+              </strong>
+            </div>
+
+            <div>
+              <span>Total Entry Fee</span>
+              <strong> ₹{{ option.total_entry_fee }} </strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- navigation -->
+
+      <div class="navigation">
+        <!--day progress -->
+
+        <button
+          type="button"
+          class="next-button"
+          *ngIf="currentDayIndex > 0"
+          (click) ="previousDay()"
+        >
+          ← PREVIOUS DAY
+        </button>
+
+        <div class="day-progress">
+          <span
+            *ngFor="let day of itineraryData.days; let i = index"
+            [class.active]="i === currentDayIndex"
+            (click)="goToDay(i)"
+          >
+            Day {{ day.day_number }}
+          </span>
+        </div>
+
+        <!--next button -->
+
+        <button
+          class="next-button"
+          *ngIf="currentDayIndex &lt; itineraryData.days.length - 1"
+          (click)="nextDay()"
+        >
+          NEXT DAY →
+        </button>
+
+        <div class ="save-message-container" *ngIf="message">
+          <div class="save-message" role ="alert">
+            {{ message }}
+          </div>
+        </div>
+
+        <!--save button -->
+
+        <button
+          type="button"
+          class="save-button"
+          *ngIf="currentDayIndex === itineraryData.days.length - 1"
+          (click)="saveItinerary()"
+          [disabled]="isSaving || showPopup"
+        >
+          {{ isSaving ? 'SAVING...' : 'SAVE ITINERARY' }}
+        </button>
+      </div>
+    </div>
+    <div
+      class="popup-overlay"
+      *ngIf="showPopup"
+    >
+
+      <div
+        class="popup-box"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="popup-title"
+        aria-describedby="popup-message"
+      >
+
+        <div class="popup-icon">
+          !
+        </div>
+
+        <h2 id="popup-title">
+          {{ popupTitle }}
+        </h2>
+
+        <p id="popup-message">
+          {{ popupMessage }}
+        </p>
+
+        <button
+          type="button"
+          class="popup-button"
+          (click)="closePopup()"
+        >
+          OK
+        </button>
+
+      </div>
+
+    </div>
+  </body>
+</html>

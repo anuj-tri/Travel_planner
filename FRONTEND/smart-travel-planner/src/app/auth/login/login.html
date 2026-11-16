@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Trave Planner_login</title>
+    <link rel="stylesheet" href="login.css" />
+  </head>
+  <body>
+    <div class="login-page">
+      <div class="login-box">
+        <h1><strong>Welcome Back</strong></h1>
+        <p>Login to your account to continue your<br />travel planning journey.</p>
+
+        <form (ngSubmit)="login()">
+          <label><strong>Email:</strong></label>
+          <input
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            placeholder="Enter your email address..."
+            required
+          />
+
+          <label for="password"><strong>Password:</strong></label>
+
+          <div class="password-wrapper">
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              name="password"
+              id="password"
+              [(ngModel)]="password"
+              placeholder="Enter your password here..."
+              required
+            />
+
+            <button
+              type="button"
+              class="toggle-password"
+              (click)="showPassword = !showPassword"
+              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            >
+              {{ showPassword ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+
+          <p>
+            <a href="" (click)="goToForgotPassword(); $event.preventDefault()"> Forgot Password </a>
+          </p>
+
+          <button class="login-btn" type="submit">Login</button>
+
+          <p>
+            Don't have an account?
+            <button class="signup-btn" type="button" (click)="goToSignup()">Sign Up</button>
+          </p>
+
+          <p *ngIf="message" class="success-message">{{ message }}</p>
+
+          <p *ngIf="errorMessage" class="error-message">
+            {{ errorMessage }}
+          </p>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

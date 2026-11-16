@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile</title>
+  </head>
+
+  <body>
+    <div class="profile-page">
+      @if (isLoading) {
+        <div class="loading-message">Loading profile...</div>
+      } @else {
+        <div class="profile-heading">
+          <h1>PROFILE</h1>
+
+          <p>View and manage your account details</p>
+        </div>
+        <div class="profile-card">
+          <div class="profile-left">
+            <div class="profile-avatar">
+              <span>👤</span>
+            </div>
+
+            <h2>{{ firstName }} {{ lastName }}</h2>
+            <p>
+              {{ email }}
+            </p>
+          </div>
+          <div class="profile-details">
+            <!-- First name -->
+
+            <div class="detail-group">
+              <label> FIRST NAME </label>
+
+              <input
+                type="text"
+                [(ngModel)]="firstName"
+                minlength="1"
+                maxlength="15"
+                [disabled]="!isEditing || isSaving"
+                [class.editing-input]="isEditing"
+              />
+
+              @if (firstNameError) {
+                <p class="field-error">
+                  {{ firstNameError }}
+                </p>
+              }
+            </div>
+            <div class="detail-group">
+              <label> LAST NAME </label>
+
+              <input
+                type="text"
+                [(ngModel)]="lastName"
+                minlength="1"
+                maxlength="15"
+                [disabled]="!isEditing || isSaving"
+                [class.editing-input]="isEditing"
+              />
+
+              @if (lastNameError) {
+                <p class="field-error">
+                  {{ lastNameError }}
+                </p>
+              }
+            </div>
+            <div class="detail-group">
+              <label> EMAIL </label>
+
+              <input type="email" [(ngModel)]="email" disabled />
+            </div>
+
+            <div class="profile-actions">
+              <button type="button" (click)="editOrSave()" [disabled]="isSaving">
+                {{ isEditing && hasChanges ? 'SAVE CHANGES' : 'EDIT' }}
+              </button>
+            </div>
+            @if (successMessage) {
+              <p class="success-message">
+                {{ successMessage }}
+              </p>
+            }
+          </div>
+        </div>
+
+        <div class="password-section">
+          <div class="password-card">
+            <div class="password-heading">
+              <h2>CHANGE PASSWORD</h2>
+
+              <p>Update your password by entering your current password and a new password.</p>
+            </div>
+            <div class="password-group">
+              <label> CURRENT PASSWORD </label>
+              <div class="password-wrapper">
+                <input
+                  id="currentPassword"
+                  [type]="showCurrentPassword ? 'text' : 'password'"
+                  [(ngModel)]="currentPassword"
+                  [disabled]="isChangingPassword"
+                  placeholder="Enter your current password"
+                />
+
+                <button
+                  type="button"
+                  class="toggle-password"
+                  (click)="showCurrentPassword = !showCurrentPassword"
+                  [disabled]="isChangingPassword"
+                  [attr.aria-label]="showCurrentPassword ? 'Hide password' : 'Show password'"
+                >
+                  {{ showCurrentPassword ? 'Hide' : 'Show' }}
+                </button>
+              </div>
+              @if (currentPasswordError) {
+                <p class="field-error">
+                  {{ currentPasswordError }}
+                </p>
+              }
+            </div>
+
+            <div class="password-group">
+              <label> NEW PASSWORD </label>
+              <div class="password-wrapper">
+                <input
+                  id="newPassword"
+                  [type]="showNewPassword ? 'text' : 'password'"
+                  [(ngModel)]="newPassword"
+                  [disabled]="isChangingPassword"
+                  placeholder="Enter your new password"
+                />
+
+                <button
+                  type="button"
+                  class="toggle-password"
+                  (click)="showNewPassword = !showNewPassword"
+                  [disabled]="isChangingPassword"
+                  [attr.aria-label]="showNewPassword ? 'Hide password' : 'Show password'"
+                >
+                  {{ showNewPassword ? 'Hide' : 'Show' }}
+                </button>
+              </div>
+
+              @if (newPasswordError) {
+                <p class="field-error">
+                  {{ newPasswordError }}
+                </p>
+              }
+            </div>
+
+            <div class="password-group">
+              <label> CONFIRM NEW PASSWORD </label>
+              <div class="password-wrapper">
+                <input
+                  id="confirmNewPassword"
+                  [type]="showConfirmNewPassword ? 'text' : 'password'"
+                  [(ngModel)]="confirmNewPassword"
+                  [disabled]="isChangingPassword"
+                  placeholder="Confirm your new password"
+                />
+
+                <button
+                  type="button"
+                  class="toggle-password"
+                  (click)="showConfirmNewPassword = !showConfirmNewPassword"
+                  [disabled]="isChangingPassword"
+                  [attr.aria-label]="showConfirmNewPassword ? 'Hide password' : 'Show password'"
+                >
+                  {{ showConfirmNewPassword ? 'Hide' : 'Show' }}
+                </button>
+              </div>
+              @if (confirmNewPasswordError) {
+                <p class="field-error">
+                  {{ confirmNewPasswordError }}
+                </p>
+              }
+            </div>
+
+            <!-- Change password button -->
+
+            <div class="password-actions">
+              <button type="button" (click)="changePassword()" [disabled]="isChangingPassword">
+                {{ isChangingPassword ? 'CHANGING PASSWORD...' : 'CHANGE PASSWORD' }}
+              </button>
+            </div>
+
+            <!-- Password success message -->
+
+            @if (passwordSuccessMessage) {
+              <p class="password-success-message">
+                {{ passwordSuccessMessage }}
+              </p>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </body>
+</html>

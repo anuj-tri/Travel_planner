@@ -1,0 +1,492 @@
+/* MAIN PROFILE PAGE*/
+
+.profile-page {
+  padding: 60px 70px;
+  min-height: calc(100vh - 85px);
+  box-sizing: border-box;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+/* PROFILE HEADING*/
+
+.profile-heading {
+  margin-bottom: 35px;
+}
+
+.profile-heading h1 {
+  margin: 0 0 10px 0;
+  font-size: 38px;
+  font-weight: 700;
+}
+
+.profile-heading p {
+  margin: 0;
+  font-size: 17px;
+}
+
+/* PROFILE CARD */
+
+.profile-card {
+  display: flex;
+  width: 850px;
+  min-height: 360px;
+
+  background-color: white;
+
+  border: 1px solid lightgray;
+  border-radius: 12px;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  overflow: hidden;
+}
+
+/* LEFT SECTION*/
+
+.profile-left {
+  width: 35%;
+
+  background-color: whitesmoke;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 35px;
+
+  box-sizing: border-box;
+
+  text-align: center;
+}
+
+/* AVATAR  */
+
+.profile-avatar {
+  width: 110px;
+  height: 110px;
+
+  border-radius: 50%;
+
+  background-color: lightgray;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 20px;
+}
+
+.profile-avatar span {
+  font-size: 48px;
+}
+
+/* NAME ON LEFT*/
+
+.profile-left h2 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+}
+
+/* EMAIL ON LEFT*/
+
+.profile-left p {
+  margin: 0;
+
+  font-size: 14px;
+
+  color: dimgray;
+
+  word-break: break-word;
+}
+
+/* RIGHT SECTION*/
+
+.profile-details {
+  width: 65%;
+
+  padding: 45px;
+
+  box-sizing: border-box;
+}
+
+/* INDIVIDUAL PROFILE INPUT GROUP*/
+
+.detail-group {
+  display: flex;
+  flex-direction: column;
+
+  margin-bottom: 22px;
+}
+
+/* PROFILE LABELS  */
+
+.detail-group label {
+  font-size: 13px;
+  font-weight: 700;
+
+  margin-bottom: 7px;
+
+  letter-spacing: 0.5px;
+}
+
+/* PROFILE INPUTS*/
+
+.detail-group input {
+  width: 100%;
+  height: 42px;
+
+  box-sizing: border-box;
+
+  padding: 0 12px;
+
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15px;
+
+  border: 1px solid transparent;
+  border-radius: 6px;
+
+  outline: none;
+
+  background-color: transparent;
+  color: dimgray;
+}
+
+/* DISABLED PROFILE INPUTS*/
+
+.detail-group input:disabled {
+  background-color: transparent;
+
+  color: dimgray;
+
+  border-color: transparent;
+
+  cursor: default;
+}
+
+/* EDITING PROFILE INPUTS*/
+
+.detail-group input.editing-input {
+  background-color: transparent;
+
+  color: black;
+
+  border: 1px solid dimgray;
+
+  box-shadow: 0 0 7px rgba(0, 0, 0, 0.18);
+}
+
+/* PROFILE INPUT FOCUS*/
+
+.detail-group input.editing-input:focus {
+  color: black;
+
+  border-color: black;
+
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+/* EDIT / SAVE BUTTON */
+
+.profile-actions {
+  margin-top: 8px;
+}
+
+.profile-actions button {
+  min-width: 125px;
+  height: 40px;
+
+  padding: 0 18px;
+
+  border: 1px solid black;
+  border-radius: 6px;
+
+  background-color: black;
+  color: white;
+
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+/* EDIT / SAVE HOVER */
+
+.profile-actions button:hover {
+  background-color: darkslategray;
+
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+}
+
+/* PROFILE SUCCESS MESSAGE*/
+
+.success-message {
+  margin: 12px 0 0 0;
+
+  color: green;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* CHANGE PASSWORD SECTION*/
+
+.password-section {
+  width: 850px;
+
+  margin-top: 35px;
+}
+
+/* CHANGE PASSWORD CARD*/
+
+.password-card {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 35px 45px;
+
+  background-color: white;
+
+  border: 1px solid lightgray;
+  border-radius: 12px;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* PASSWORD HEADING  */
+
+.password-heading {
+  margin-bottom: 28px;
+}
+
+.password-heading h2 {
+  margin: 0 0 8px 0;
+
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.password-heading p {
+  margin: 0;
+
+  font-size: 14px;
+
+  color: dimgray;
+}
+
+/* PASSWORD INPUT GROUP */
+
+.password-group {
+  display: flex;
+  flex-direction: column;
+
+  margin-bottom: 20px;
+}
+
+/* PASSWORD LABEL*/
+
+.password-group label {
+  font-size: 13px;
+  font-weight: 700;
+
+  margin-bottom: 7px;
+
+  letter-spacing: 0.5px;
+}
+
+/* PASSWORD INPUT */
+
+.password-group input {
+  width: 100%;
+  height: 42px;
+
+  box-sizing: border-box;
+
+  padding: 0 12px;
+
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15px;
+
+  color: black;
+
+  background-color: white;
+
+  border: 1px solid lightgray;
+  border-radius: 6px;
+
+  outline: none;
+
+  transition: all 0.2s ease;
+}
+.password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-wrapper input {
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 80px 0 12px;
+
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15px;
+  color: black;
+
+  background-color: white;
+  border: 1px solid lightgray;
+  border-radius: 6px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.password-wrapper input:focus {
+  border-color: black;
+  box-shadow: 0 0 7px rgba(0, 0, 0, 0.15);
+}
+
+.password-wrapper input:disabled {
+  background-color: whitesmoke;
+  color: dimgray;
+  cursor: not-allowed;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  border: none;
+  border-radius: 8px;
+  background-color: black;
+  color: white;
+
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  padding: 6px 12px;
+
+  transition: background-color 0.2s ease;
+}
+
+.toggle-password:hover:not(:disabled) {
+  background-color: darkslategray;
+}
+
+.toggle-password:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.toggle-password:focus-visible {
+  outline: 2px solid black;
+  outline-offset: 2px;
+}
+
+/* PASSWORD INPUT FOCUS */
+
+.password-group input:focus {
+  border-color: black;
+
+  box-shadow: 0 0 7px rgba(0, 0, 0, 0.15);
+}
+
+/* DISABLED PASSWORD INPUT                   */
+
+.password-group input:disabled {
+  background-color: whitesmoke;
+
+  color: dimgray;
+
+  cursor: not-allowed;
+}
+
+/* PASSWORD ACTIONS  */
+
+.password-actions {
+  margin-top: 8px;
+}
+
+/* CHANGE PASSWORD BUTTON*/
+
+.password-actions button {
+  min-width: 170px;
+  height: 40px;
+
+  padding: 0 20px;
+
+  border: 1px solid black;
+  border-radius: 6px;
+
+  background-color: black;
+  color: white;
+
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+/* CHANGE PASSWORD BUTTON HOVER */
+.password-actions button:hover {
+  background-color: darkslategray;
+
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+}
+
+/* PASSWORD SUCCESS MESSAGE*/
+
+.password-success-message {
+  margin: 12px 0 0 0;
+
+  color: green;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* VALIDATION ERROR*/
+
+.field-error {
+  margin: 5px 0 0 0;
+
+  color: red;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* DISABLED PROFILE BUTTON*/
+
+.profile-actions button:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.6;
+}
+
+/* DISABLED PASSWORD BUTTON */
+
+.password-actions button:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.6;
+}
+
+/* LOADING MESSAGE */
+
+.loading-message {
+  font-size: 17px;
+
+  color: dimgray;
+
+  padding-top: 20px;
+}

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create new trip</title>
+  </head>
+  <body>
+    <div class="create-trip-page">
+      <div class="page-heading">
+        <h1>CREATE NEW TRIP</h1>
+
+        <p>PLAN YOUR NEXT ADVENTURE WITH AI POWERED ITINERARY</p>
+      </div>
+
+      <div class="trip-details">
+        <div class="form-group">
+          <label for="starting-destination">STARTING DESTINATION (you want to discover)</label>
+          <input
+            type="text"
+            id="starting-destination"
+            [(ngModel)]="startingDestination"
+            placeholder="Enter starting destination"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="ending-destination">ENDING DESTINATION (you want to discover)</label>
+          <input
+            type="text"
+            id="ending-destination"
+            [(ngModel)]="endingDestination"
+            placeholder="Enter ending destination"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="start-date">START DATE</label>
+          <input type="date" id="start-date" [(ngModel)]="startDate" [min]="minDate" />
+        </div>
+
+        <div class="form-group">
+          <label for="end-date">END DATE</label>
+          <input type="date" id="end-date" [(ngModel)]="endDate" [min]="startDate || minDate" />
+        </div>
+
+        <div class="form-group">
+          <label for="travellers">NO. OF TRAVELLERS</label>
+          <input
+            type="number"
+            id="travellers"
+            [(ngModel)]="travellers"
+            placeholder="Number of travellers"
+            min="1"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="budget">TOTAL BUDGET OF THE TRIP</label>
+          <input
+            type="number"
+            id="budget"
+            [(ngModel)]="budget"
+            placeholder="Enter your budget"
+            min="2501"
+          />
+        </div>
+      </div>
+
+      <div class="preferences">
+        <h2>PREFERENCES</h2>
+        <div class="preference-options">
+          <button
+            type="button"
+            *ngFor="let preference of preferences"
+            (click)="togglePreference(preference)"
+            [class.selected]="isPreferenceSelected(preference)"
+          >
+            {{ preference }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Errro Message-->
+      <div class="trip-error-message" *ngIf="errorMessage" role="alert" aria-live="polite">
+        <span class="error-icon">!</span>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <!--Generate message-->
+
+      <div class="generation-status" *ngIf="isGenerating">
+        <div class = 'generation-heading'>
+          <span class = 'loading-icon'>✈</span>
+          <div>
+            <h3> Crafting your perfect trip</h3>
+            <p>{{ generateMessage }}</p>
+          </div>
+        </div>
+
+        <div
+          class = 'progress-track'
+          role = 'progressbar'
+          [attr.aria-valuenow] = 'generationProgress'
+          aria-valuemin="0"
+          aria-valuemax = '100'
+          aria-label = "Trip generation progress"
+          >
+            <div class = "progress-fill" [style.width.%] ="generationProgress"></div>
+        </div>
+
+        <div class = "progress-details">
+          <span> {{ progressLabel }}</span>
+          <span> {{ generationProgress }}%</span>
+        </div>
+
+        <p class = 'estimated-time'>
+          <span>◷</span>{{ timeRemainingMessage }}
+        </p>
+      </div>
+
+      <div class="generate-trip">
+        <button type="button" (click)="generateTrip()" [disabled]="isGenerating">
+          {{ isGenerating ? 'GENERATING TRIP...' : 'GENERATE TRIP' }}
+        </button>
+      </div>
+    </div>
+  </body>
+</html>

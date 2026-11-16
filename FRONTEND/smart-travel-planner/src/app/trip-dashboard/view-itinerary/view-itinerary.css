@@ -1,0 +1,667 @@
+/* MAIN PAGE */
+
+.main-content {
+  padding: 30px 40px;
+  background-color: whitesmoke;
+  min-height: 100vh;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* BACK BUTTON */
+
+.back-button {
+  display: block;
+  margin-left: auto;
+  margin-bottom: 20px;
+  background-color: white;
+  color: black;
+  border: 1px solid lightgray;
+  border-radius: 20px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.back-button:hover {
+  background-color: black;
+  color: white;
+}
+
+/* TRIP HEADER */
+
+.trip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: white;
+  padding: 20px 24px;
+  border-radius: 10px;
+  border: 1px solid gainsboro;
+  margin-bottom: 20px;
+}
+
+.trip-information h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+  color: black;
+}
+
+.trip-routes {
+  margin: 0 0 15px;
+  color: black;
+  font-size: 14px;
+}
+
+.trip-summary {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  color: black;
+  font-size: 16px;
+  flex-wrap: wrap;
+}
+
+.trip-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* STATUS */
+
+/* Trip Status */
+.trip-status {
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: center;
+  margin-top: 5px;
+}
+
+.status-upcoming {
+    background-color: blue;
+    color: white;
+}
+
+.status-ongoing {
+    background-color: green;
+    color: white;
+}
+
+.status-missed {
+    background-color: rgb(233, 84, 84);
+    color: white;
+}
+
+.status-completed {
+    background-color: #cfae42;
+    color: #fbfaf8;
+}
+
+.trip-status-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* DAY NAVIGATION */
+
+.day-navigation {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.day-navigation button {
+  flex: 0 0 auto;
+  min-width: 90px;
+  padding: 10px 16px;
+  background-color: white;
+  border: 1px solid gainsboro;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #333;
+  transition: 0.2s ease;
+}
+
+.day-navigation button strong {
+  font-size: 13px;
+}
+
+.day-navigation button small {
+  font-size: 10px;
+  color: gray;
+}
+
+.day-navigation button:hover {
+  border-color: royalblue;
+}
+
+.day-navigation button.selected {
+  background-color: royalblue;
+  color: white;
+  border-color: royalblue;
+}
+
+.day-navigation button.selected small {
+  color: white;
+}
+
+/* DAY CONTENT */
+
+.day-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(350px, 0.8fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* ITINERARY SECTION */
+
+.itinerary-section {
+  background-color: white;
+  border: 1px solid gainsboro;
+  border-radius: 10px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.itinerary-heading {
+  margin-bottom: 20px;
+}
+
+.day-label {
+  display: block;
+  font-size: 13px;
+  color: black;
+  font-weight: 790;
+  margin-bottom: 5px;
+}
+
+.itinerary-heading h2 {
+  margin: 0;
+  font-size: 21px;
+  color: black;
+  font-weight: 900;
+}
+
+/* PLACES */
+
+.place-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.place-card {
+  display: grid;
+  grid-template-columns: 35px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid lightgray;
+  border-radius: 8px;
+  background-color: whitesmoke;
+}
+
+.place-number {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background-color: black;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.place-information h3 {
+  margin: 0 0 5px;
+  font-size: 14px;
+  color: black;
+}
+
+.place-information .activity {
+  margin: 0 0 5px;
+  font-size: 17px;
+  font-weight: 500;
+  color: #333;
+}
+
+.price-warning {
+  display: block;
+  color: red;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.place-information .time {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+.entry-fee {
+  text-align: right;
+  min-width: 100px;
+}
+
+.entry-fee span {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: black;
+  margin-bottom: 4px;
+}
+
+.entry-fee strong {
+  font-size: 11px;
+  color: black;
+}
+
+/* DAY SUMMARY */
+
+.day-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  border-top: 1px solid lightgray;
+  margin-top: 15px;
+  padding-top: 15px;
+}
+
+.day-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.day-summary span {
+  font-size: 13px;
+  color: black;
+  font-weight: 600;
+}
+
+.day-summary strong {
+  font-size: 17px;
+  color: black;
+}
+
+.day-summary small {
+  font-size: 16px;
+  font-weight: 700;
+  color: black;
+}
+
+/* MAP */
+
+.map-section {
+  background-color: white;
+  border: 1px solid gainsboro;
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 500px;
+}
+
+.map-header {
+  padding: 15px 18px;
+  border-bottom: 1px solid lightgray;
+}
+
+.map-header h2 {
+  margin: 0;
+  font-size: 14px;
+  color: black;
+}
+
+.map-container {
+  width: 100%;
+  height: calc(100% - 50px);
+  min-height: 450px;
+  position: relative;
+}
+
+.map-placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 450px;
+  background-color: lightgray;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: gray;
+}
+
+.map-placeholder p {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.map-placeholder span {
+  font-size: 11px;
+}
+
+/* LOADING AND EMPTY STATE */
+
+.loading,
+.no-itinerary {
+  background-color: white;
+  border: 1px solid gainsboro;
+  border-radius: 10px;
+  padding: 50px;
+  text-align: center;
+}
+
+.loading h2,
+.no-itinerary h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.loading p,
+.no-itinerary p {
+  margin: 0;
+  color: gray;
+  font-size: 13px;
+}
+
+/* ERROR MESSAGE */
+
+.itinerary-error-message {
+  margin-top: 15px;
+  padding: 12px 16px;
+  background-color: #fff0f0;
+  color: darkred;
+  border: 1px solid #f0bcbc;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* MARK AS COMPLETED BUTTON */
+
+.complete-button {
+  display: block;
+  margin-top: 12px;
+  padding: 12px 20px;
+  background-color: darkgreen;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.complete-button:hover {
+  background-color: green;
+}
+
+/* ========================================= */
+/* CUSTOM COMPLETION CONFIRMATION DIALOG */
+/* ========================================= */
+
+/* Dark Overlay */
+.complete-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 20px;
+  box-sizing: border-box;
+
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+
+  animation: completeOverlayFadeIn 0.2s ease;
+}
+
+/* Dialog Box */
+.complete-dialog {
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+
+  background-color: white;
+  border-radius: 18px;
+  padding: 32px;
+
+  text-align: center;
+
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
+
+  animation: completeDialogAppear 0.25s ease;
+}
+
+/* Warning Icon */
+.complete-dialog-icon {
+  width: 58px;
+  height: 58px;
+
+  margin: 0 auto 18px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  border-radius: 50%;
+  background-color: #fff0f0;
+  border: 2px solid #f5caca;
+
+  color: #c62828;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+/* Dialog Heading */
+.complete-dialog h2 {
+  margin: 0 0 12px;
+  color: #171717;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Dialog Message */
+.complete-dialog p {
+  margin: 0 0 28px;
+  color: black;
+  font-size: 17px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+/* Dialog Buttons */
+.complete-dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Cancel Button */
+.cancel-complete-button {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  color: #333;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.cancel-complete-button:hover {
+  background-color: #f3f4f6;
+}
+
+/* Confirm Button */
+.confirm-complete-button {
+  flex: 1;
+  border: none;
+  background-color: #166534;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.confirm-complete-button:hover {
+  background-color: #14532d;
+}
+
+/* Keyboard Focus */
+.cancel-complete-button:focus-visible,
+.confirm-complete-button:focus-visible {
+  outline: 3px solid #64748b;
+  outline-offset: 3px;
+}
+
+/* Dialog Animations */
+@keyframes completeOverlayFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes completeDialogAppear {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 900px) {
+  .day-content {
+    grid-template-columns: 1fr;
+  }
+
+  .map-section {
+    min-height: 400px;
+  }
+
+  .trip-header {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .trip-summary {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding: 20px 15px;
+  }
+
+  .trip-information h1 {
+    font-size: 23px;
+  }
+
+  .trip-summary {
+    gap: 12px;
+    font-size: 14px;
+  }
+
+  .trip-status-action {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .day-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .place-card {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .entry-fee {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .day-summary {
+    flex-direction: column;
+  }
+
+  .map-section {
+    min-height: 350px;
+  }
+
+  .map-container {
+    min-height: 320px;
+  }
+
+  /* Mobile Dialog */
+  .complete-dialog {
+    padding: 26px 20px;
+  }
+
+  .complete-dialog h2 {
+    font-size: 21px;
+  }
+
+  .complete-dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancel-complete-button,
+  .confirm-complete-button {
+    width: 100%;
+    padding: 13px 16px;
+  }
+}
+
+/* Respect Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  .complete-dialog-overlay,
+  .complete-dialog,
+  .complete-button,
+  .cancel-complete-button,
+  .confirm-complete-button {
+    animation: none;
+    transition: none;
+  }
+}

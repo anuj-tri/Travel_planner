@@ -12,6 +12,9 @@ from app.Schema.trip import (
     SavedItinerary,
     UpdateTripDateRequest,
     DeleteTripResponse,
+    EditTripDetailsResponse,
+    PreviewModifiedTripRequest,
+    SaveModifiedTripRequest,
 )
 
 # for having the curent user who login
@@ -26,6 +29,9 @@ from app.services.trip_service import (
     delete_trip,
     get_saved_trips_service,
     mark_trip_completed_service,
+    get_trip_edit_details_service,
+    preview_modified_itinerary_service,
+    save_modified_trip_service,
 )
 
 router = APIRouter(prefix="/trips", tags=["Trips"])
@@ -144,4 +150,51 @@ def get_saved_trips(
     return get_saved_trips_service(
         db,
         current_user,
+    )
+
+#Get trip details for editing
+@router.get(
+    "/{trip_id}/edit-details",
+    response_model= EditTripDetailsResponse,
+)
+def get_trip_edit_details(
+    trip_id: int,
+    db: Session = Depends(get_db),
+    current_user: Users = Depends(get_current_user),
+):
+    return get_trip_edit_details_service(
+        trip_id = trip_id,
+        db=db,
+        current_user= current_user,
+    )
+
+
+#Generate a preview using modified trip details
+@router.post("/{trip_id}/preview-itinerary")
+def preview_modified_itinerary(
+    trip_id: int,
+    request: PreviewModifiedTripRequest,
+    db: Session = Depends(get_db),
+    current_user: Users = Depends(get_current_user),
+):
+    return preview_modified_itinerary_service(
+        trip_id = trip_id,
+        request = request,
+        db=db,
+        current_user= current_user,
+    )
+
+
+@router.put("/{trip_id}/save-modified-trip")
+def save_modified_trip(
+    trip_id: int,
+    request: SaveModifiedTripRequest,
+    db: Session = Depends(get_db),
+    current_user: Users = Depends(get_current_user),
+):
+    return save_modified_trip_service(
+        trip_id = trip_id,
+        request = request,
+        db=db,
+        current_user=current_user,
     )

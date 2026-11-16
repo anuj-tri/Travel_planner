@@ -1,5 +1,7 @@
 # Python virtual environment
 Backend/venv/
+venv/
+.venv/
 
 # Python cache
 __pycache__/
@@ -11,3 +13,61 @@ __pycache__/
 
 # Logs
 *.log
+
+#angular / node generated files
+
+node_modules/
+.angular/
+dist/
+
+#angular environment file containing the google maps api key
+/FRONTEND/smart-travel-planner/src/environments/environment.ts
+
+#postan rtesting files
+.postman/
+postman/
+
+
+/FRONTEND_temp/
+
+# Production deployment secrets and configuration
+/.env.production
+/docker-compose.prod.yml
+
+
+# Database backups
+*.dump
+*.sql
+*.backup
+
+
+# Windows shortcuts
+*.lnk
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Secret files and folders
+secrets/
+**/secrets/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python test and tooling cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
