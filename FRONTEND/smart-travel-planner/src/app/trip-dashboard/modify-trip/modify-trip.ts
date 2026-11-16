@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
@@ -11,6 +11,14 @@ import { CommonModule } from '@angular/common';
 })
 export class ModifyTrip implements OnInit {
   savedTrip: any[] = [];
+
+  selectedStatus: string = 'all';
+  statusFilters = [
+    { label: 'All Trips', value: 'all' },
+    { label: 'Upcoming', value: 'upcoming' },
+    { label: 'Ongoing', value: 'ongoing' },
+    { label: 'Missed', value: 'missed' },
+  ];
 
   isLoading: boolean = false;
 
@@ -26,26 +34,22 @@ export class ModifyTrip implements OnInit {
     this.loadTrips();
   }
 
+  get filteredTrips(): any[] {
+    if (this.selectedStatus === 'all') {
+      return this.savedTrip;
+    }
+
+    return this.savedTrip.filter(
+      (trip: any) => trip.status === this.selectedStatus,
+    );
+  }
+
   loadTrips(): void {
     console.log(' ==== MODIFY TRIP: STARTS ====');
     this.isLoading = true;
     this.message = '';
 
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      this.isLoading = false;
-      this.message = 'Please login again.';
-
-      this.cdr.detectChanges();
-      return;
-    }
-
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${token}`,
-    });
-
-    this.http.get<any[]>('http://127.0.0.1:8000/trips', { headers }).subscribe({
+    this.http.get<any[]>('/trips', { withCredentials: true }).subscribe({
       next: (response: any[]) => {
         console.log('Trip received:', response);
 
@@ -75,7 +79,7 @@ export class ModifyTrip implements OnInit {
   }
 
   modifyTrip(tripId: number): void {
-    console.log('Selected trip fpor modification:', tripId);
+    console.log('Selected trip for modification:', tripId);
 
     if (!tripId) {
       this.message = 'Invalid trip ID.';

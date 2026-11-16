@@ -1,4 +1,5 @@
-FROM python:3.10-slim
+#went from 3.10-slim to 3.11 slim because valkey 6.2 requres above then 3.11
+FROM python:3.11-slim
 
 # set the working directory inside the container
 WORKDIR /app

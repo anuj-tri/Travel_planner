@@ -1,10 +1,9 @@
-
-node_module/
+node_modules/
 .angular/
 dist/
 coverage/
 .git/
-.env/
+.env
 .env.*
 !.env.example
 *.log

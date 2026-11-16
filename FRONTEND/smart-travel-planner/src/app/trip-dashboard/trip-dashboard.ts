@@ -1,6 +1,6 @@
 import { Component,OnInit,ChangeDetectorRef } from '@angular/core';
 import { Router,RouterLink,RouterLinkActive,RouterOutlet} from "@angular/router";
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../auth/auth.service';
 
 
@@ -29,21 +29,11 @@ export class TripDashboard implements OnInit{
   }
 
   getCurrentUser(): void {
-    const token = this.authService.getAccessToken();
 
-    if(!token) {
-      console.log('Access token not found');
-      return;
-    }
-
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${token}`
-    });
-
-    this.http.get<any>('http://127.0.0.1:8000/auth/me', { headers }).subscribe({
-      next: (resposne) => {
-        this.firstName = resposne.first_name;
-        this.lastName = resposne.last_name;
+    this.http.get<any>('/auth/me', { withCredentials: true }).subscribe({
+      next: (response) => {
+        this.firstName = response.first_name;
+        this.lastName = response.last_name;
 
         this.cdr.markForCheck();
       },

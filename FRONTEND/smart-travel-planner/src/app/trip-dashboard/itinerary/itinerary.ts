@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 
 @Component({
@@ -19,9 +19,14 @@ export class Itinerary {
   message: string = '';
   isSaving: boolean = false;
 
+  showPopup: boolean = false;
+  popupTitle: string = '';
+  popupMessage: string = '';
+
   constructor(
     private http: HttpClient,
     private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
     const navigate = window.history.state;
 
@@ -72,6 +77,17 @@ export class Itinerary {
     }
   }
 
+  // Previous day
+
+  previousDay(): void {
+    if (this.currentDayIndex > 0) {
+      this.currentDayIndex--;
+
+      console.log('Moved to Day:', this.currentDayIndex + 1);
+    }
+  }
+
+
   // going to specific day
 
   goToDay(dayIndex: number): void {
@@ -99,19 +115,42 @@ export class Itinerary {
     return !!activity && activity.includes(warning);
   }
 
-  //save Itinerary
+  // Display error popup
+  showErrorPopup(title: string, message: string): void {
+    this.popupTitle = title;
+    this.popupMessage = message;
+    this.showPopup = true;
 
+    this.cdr.detectChanges();
+  }
+
+  // Close popup and unlock Save button
+  closePopup(): void {
+    this.showPopup = false;
+
+    this.isSaving = false;
+
+    this.cdr.detectChanges();
+  }
+
+  //save Itinerary
   saveItinerary(): void {
     if (this.isSaving) {
       return;
     }
-    const allDaySelected = this.selectedOptions.every(
-      (option) => option !== null,
-    );
+    const unselectedDays = this.selectedOptions
+      .map((option, index) =>
+        option === null
+          ? this.itineraryData.days[index].day_number
+          : null,
+    )
+    .filter((dayNumber) => dayNumber !== null);
 
-    if (!allDaySelected) {
-      alert('Please select an option for every day.');
-
+    if (unselectedDays.length > 0) {
+      const dayList = unselectedDays
+        .map((dayNumber) => `Day ${dayNumber}`)
+        .join(', ')
+      this.message=`You have not selected an option for these days: ${dayList}.`;
       return;
     }
 
@@ -136,60 +175,106 @@ export class Itinerary {
     });
 
     console.log('Data being saved to backend:', itineraries);
-
-    //get access token
-
-    const token = localStorage.getItem('access_token');
-
-    console.log('Access token exists:', !!token);
-
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    });
-
+    this.message= '';
     //Start saving
-
     this.isSaving = true;
 
     this.http
       .post(
-        `http://localhost:8000/trips/${this.tripId}/save-itinerary`,
-
+        `/trips/${this.tripId}/save-itinerary`,
         {
           itineraries: itineraries,
         },
-
         {
-          headers: headers,
+          withCredentials: true,
         },
       )
       .subscribe({
-        //suceess
+
+        // SUCCESS
         next: (response: any) => {
           console.log('Save itinerary response:', response);
 
           this.isSaving = false;
-          this.message = 'Itinerary saved Successfully!';
+          this.message = 'Itinerary saved successfully!';
 
-          // redirecting to saved trips after showing message
+          this.cdr.detectChanges();
 
+          // Redirect after showing success message
           setTimeout(() => {
             this.router.navigate(['/trip-dashboard/saved-trips']);
           }, 1500);
         },
 
-        //error
-
+        // ERROR
         error: (error) => {
-          console.error('Error saving intinerary:', error);
-
+          console.error('Error saving itinerary:', error);
           console.error('Backend error details:', error.error);
 
           this.isSaving = false;
 
-          this.message = 'Failed to save itinerary.';
-        },
+          const detail = error.error?.detail;
+
+          // CASE 1: 422 - PLACE NOT FOUND
+          if (
+            error.status === 422 &&
+            detail?.code === 'PLACE_NOT_FOUND'
+          ) {
+            const dayNumber = detail.day_number;
+            const placeName = detail.place_name;
+
+            this.showErrorPopup(
+              'Unable to Save Itinerary',
+              `We couldn't find or verify "${placeName}" for Day ${dayNumber}. ` +
+              `Please select a different itinerary option for Day ${dayNumber} and try saving again.`
+            );
+          }
+
+          // CASE 2: 503 - GOOGLE PLACES API FAILURE
+          else if (
+            error.status === 503 &&
+            detail?.code === 'GOOGLE_API_FAILURE'
+          ) {
+            this.showErrorPopup(
+              'Google Places Service Unavailable',
+              'Google Places service is temporarily unavailable. ' +
+              'Please wait 4–5 minutes and try saving your itinerary again.'
+            );
+          }
+
+          // CASE 3: OTHER 422 ERRORS
+          else if (error.status === 422) {
+            const errorMessage =
+              typeof detail === 'string'
+                ? detail
+                : detail?.message ||
+                  "We couldn't verify one or more places. Please try again.";
+
+            this.showErrorPopup(
+              'Unable to Save Itinerary',
+              errorMessage
+            );
+          }
+
+          // CASE 4: CONNECTION FAILURE
+          else if (error.status === 0) {
+            this.showErrorPopup(
+              'Connection Error',
+              'Unable to connect to the server. Please check your internet connection and try again.'
+            );
+          }
+
+          // CASE 5: OTHER ERRORS
+          else {
+            this.showErrorPopup(
+              'Unable to Save Itinerary',
+              "We couldn't save your itinerary right now. Please try again."
+            );
+          }
+
+          this.cdr.detectChanges();
+        }
+
       });
   }
 }

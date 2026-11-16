@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms'
 import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
 interface TripEditDetails {
   trip_id: number;
@@ -13,6 +13,7 @@ interface TripEditDetails {
   no_of_travellers: number;
   budget: number;
   status: string;
+  edit_mode: 'full_edit' | 'restricted_edit'
   preference_ids: number[];
 }
 
@@ -104,6 +105,8 @@ export class EditYourTrip implements OnInit, OnDestroy {
   isGenerating = false;
   errorMessage = '';
   generateMessage = '';
+  tripStatus = '';
+  editMode: 'full_edit' | 'restricted_edit' | '' = '';
 
   fieldErrors: { [key: string]: string} ={};
 
@@ -166,19 +169,23 @@ loadTripDetails(): void {
   this.isLoading = true;
   this.errorMessage ='';
 
-  const token = localStorage.getItem('access_token');
-
-  const headers = token
-    ? new HttpHeaders({
-        Authorization: `Bearer ${token}`
-      })
-    : new HttpHeaders()
-
     this.http.get<TripEditDetails>(
-      `http://127.0.0.1:8000/trips/${this.tripId}/edit-details`,
-      { headers }
+      `/trips/${this.tripId}/edit-details`,
+      { withCredentials: true}
     ).subscribe({
       next: (response) => {
+        this.tripStatus = response.status;
+
+        //validate the editing mode received from backend
+        if (
+          response.edit_mode !== 'full_edit' &&
+          response.edit_mode !== 'restricted_edit'
+        ) {
+          this.errorMessage = "Invalid trip editing mode received from server.";
+          this.isLoading = false;
+          return;
+        }
+        this.editMode = response.edit_mode;
         this.startingDestination = response.starting_destination;
         this.endingDestination = response.ending_destination;
         this.startDate = response.start_date;
@@ -262,6 +269,9 @@ loadTripDetails(): void {
   // swap the starting and ending destination
 
   swapDestinations(): void {
+    if (this.editMode === 'restricted_edit'){
+      return;
+    }
     const temp = this.startingDestination;
     this.startingDestination = this.endingDestination;
     this.endingDestination = temp;
@@ -282,36 +292,73 @@ loadTripDetails(): void {
     return this.selectedPreferences.includes(preference);
   }
 
+
   private validateForm(): boolean {
     this.fieldErrors = {};
     this.errorMessage = '';
 
-    if (!this.startingDestination.trim()){
-      this.fieldErrors['startingDestination'] = 'Please enter the starting destination.';
+    // Starting destination
+    if (!this.startingDestination.trim()) {
+      this.fieldErrors['startingDestination'] =
+        'Please enter the starting destination.';
     }
 
-    if (!this.endingDestination.trim()){
-      this.fieldErrors['endingDestination'] = 'Please enter the ending destination.';
+    // Ending destination
+    if (!this.endingDestination.trim()) {
+      this.fieldErrors['endingDestination'] =
+        'Please enter the ending destination.';
     }
 
-    if (!this.startDate){
-      this.fieldErrors['startDate'] = 'Please select the start date.';
+    // Start date validation
+    if (!this.startDate) {
+      this.fieldErrors['startDate'] =
+        'Please select the start date.';
+    } else if (
+      this.editMode === 'full_edit' &&
+      this.startDate < this.minDate
+    ) {
+      this.fieldErrors['startDate'] =
+        'Start date must be today or a future date.';
     }
 
-    if (!this.endDate){
-      this.fieldErrors['endDate'] = 'Please selsct the end date.';
+    // End date validation
+    if (!this.endDate) {
+      this.fieldErrors['endDate'] =
+        'Please select the end date.';
+    } else if (this.editMode === 'restricted_edit') {
 
-    }
-    if (this.startDate && this.endDate && this.endDate < this.startDate){
-      this.fieldErrors['endDate'] = 'End date must be on or after ythe start date.';
+      const tomorrowString = this.getTomorrowDate();
+
+      if (this.endDate < tomorrowString) {
+        this.fieldErrors['endDate'] =
+          'End date must be tomorrow or a later date.';
+      }
+
+    } else if (
+      this.editMode === 'full_edit' &&
+      this.startDate &&
+      this.endDate < this.startDate
+    ) {
+      this.fieldErrors['endDate'] =
+        'End date must be on or after the start date.';
     }
 
-    if (!Number.isInteger(Number(this.travellers)) || Number(this.travellers) < 1){
-      this.fieldErrors['travellers'] = 'Enter a valid number of travellers graetwe then zero';
+    // Number of travellers
+    if (
+      !Number.isInteger(Number(this.travellers)) ||
+      Number(this.travellers) < 1
+    ) {
+      this.fieldErrors['travellers'] =
+        'Enter a valid number of travellers greater than zero.';
     }
 
-    if (!Number.isFinite(Number(this.budget)) || Number(this.budget) < 2500){
-      this.fieldErrors['budget'] = 'Enter a valid budget of at least ₹2500';
+    // Budget
+    if (
+      !Number.isFinite(Number(this.budget)) ||
+      Number(this.budget) < 2500
+    ) {
+      this.fieldErrors['budget'] =
+        'Enter a valid budget of at least ₹2500.';
     }
 
     return Object.keys(this.fieldErrors).length === 0;
@@ -320,6 +367,17 @@ loadTripDetails(): void {
   clearFieldError(field: string): void {
     delete this.fieldErrors[field];
     this.errorMessage = '';
+  }
+
+  getTomorrowDate(): string {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
   }
 
   goBackToModifyTrip(): void {
@@ -436,15 +494,9 @@ loadTripDetails(): void {
       preference_ids: preferenceIds
     };
 
-    const token = localStorage.getItem('access_token');
-
-    const headers = new HttpHeaders(
-      token ? { Authorization: `Bearer ${token}`} : {}
-    );
-
-    this.http.post<PreviewItineraryResponse>(`http://127.0.0.1:8000/trips/${this.tripId}/preview-itinerary`,
+    this.http.post<PreviewItineraryResponse>(`/trips/${this.tripId}/preview-itinerary`,
       requestBody,
-      { headers }
+      { withCredentials: true }
     ).subscribe({
       next: (response) => {
         console.log('Modified itinerary response:', response);

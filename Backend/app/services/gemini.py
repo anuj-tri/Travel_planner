@@ -1,17 +1,178 @@
 import os
-from dotenv import load_dotenv
-from google import genai
-
 import json
 import time
+import logging
+
+from dotenv import load_dotenv
+from google import genai
 from fastapi import HTTPException, status
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+if not GEMINI_API_KEY:
+    raise RuntimeError("GEMINI_API_KEY is not configured.")
+
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+
+def validate_itinerary(itinerary: dict) -> None:
+
+    if not isinstance(itinerary, dict):
+        raise ValueError("Gemini response must be a JSON object.")
+
+    # Validate trip summary
+    summary = itinerary.get("trip_summary")
+
+    if not isinstance(summary, dict):
+        raise ValueError("Missing or invalid trip_summary.")
+
+    required_summary_fields = [
+        "starting_destination",
+        "ending_destination",
+        "start_date",
+        "end_date",
+        "number_of_travellers",
+        "budget",
+        "preferences",
+    ]
+
+    for field in required_summary_fields:
+        if field not in summary:
+            raise ValueError(f"Missing trip_summary field: {field}")
+
+    # Validate days
+    days = itinerary.get("days")
+
+    if not isinstance(days, list) or not days:
+        raise ValueError("Days must be a non-empty list.")
+
+    day_numbers = set()
+
+    for day in days:
+
+        if not isinstance(day, dict):
+            raise ValueError("Each day must be a JSON object.")
+
+        # validate day number
+        day_number = day.get("day_number")
+
+        if type(day_number) is not int or day_number < 1:
+            raise ValueError("Invalid day_number.")
+
+        if day_number in day_numbers:
+            raise ValueError(f"Duplicate day_number: {day_number}")
+
+        day_numbers.add(day_number)
+
+        # validate options
+        options = day.get("options")
+
+        if not isinstance(options, list) or len(options) != 3:
+            raise ValueError(f"Day {day_number} must contain exactly 3 options.")
+
+        option_numbers = set()
+
+        for option in options:
+
+            if not isinstance(option, dict):
+                raise ValueError("Each option must be a JSON object.")
+
+            option_number = option.get("option_number")
+
+            if type(option_number) is not int or option_number not in (1, 2, 3):
+                raise ValueError("Invalid option_number.")
+
+            option_numbers.add(option_number)
+
+            if (
+                not isinstance(option.get("option_name"), str)
+                or not option["option_name"].strip()
+            ):
+                raise ValueError("Invalid option_name.")
+
+            # validate places
+            places = option.get("places")
+
+            if not isinstance(places, list) or not places:
+                raise ValueError("Each option must contain places.")
+
+            for place in places:
+
+                if not isinstance(place, dict):
+                    raise ValueError("Each place must be a JSON object.")
+
+                required_place_fields = [
+                    "place_name",
+                    "city",
+                    "state",
+                    "country",
+                    "activity",
+                    "approximate_time",
+                ]
+
+                for field in required_place_fields:
+                    value = place.get(field)
+
+                    if not isinstance(value, str) or not value.strip():
+                        raise ValueError(f"Invalid or missing place field: {field}")
+
+                fee = place.get("entry_fee_per_person")
+
+                if type(fee) not in (int, float) or fee < 0:
+                    raise ValueError("Invalid entry_fee_per_person.")
+
+            # Validate option duration
+            value = option.get("estimated_duration")
+
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("Invalid estimated_duration.")
+
+            # validate totral entry fees
+            total_fee = option.get("total_entry_fee")
+
+            if type(total_fee) not in (int, float) or total_fee < 0:
+                raise ValueError("Invalid total_entry_fee.")
+
+        if option_numbers != {1, 2, 3}:
+            raise ValueError(f"Day {day_number} must have option numbers 1, 2 and 3.")
+
+        # Validate optional suggestions
+    suggestions = itinerary.get("optional_suggestions")
+
+    if not isinstance(suggestions, list):
+        raise ValueError("Invalid optional_suggestions.")
+
+    for suggestion in suggestions:
+
+        if not isinstance(suggestion, dict):
+            raise ValueError("Each optional suggestion must be an object.")
+
+        required_fields = [
+            "recommended_day",
+            "place_name",
+            "city",
+            "state",
+            "country",
+            "reason",
+            "approximate_time",
+        ]
+
+        for field in required_fields:
+            value = suggestion.get(field)
+
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(
+                    f"Invalid or missing optional suggestion field: {field}"
+                )
+
+        fee = suggestion.get("entry_fee_per_person")
+
+        if type(fee) not in (int, float) or fee < 0:
+            raise ValueError("Invalid optional suggestion entry fee.")
 
 
 def generate_itinerary(
@@ -22,6 +183,7 @@ def generate_itinerary(
     no_of_travellers,
     budget,
     preferences,
+    starting_day_number: int = 1,
 ):
     prompt = f"""
 You are an AI travel planner for a Smart Travel Planner application.
@@ -49,22 +211,27 @@ MAIN ITINERARY REQUIREMENTS
 
 1. Generate an itinerary for every day between the start date and end date.
 
-2. Generate EXACTLY 3 different itinerary options for EACH day.
+2. Start itinerary day numbering from {starting_day_number}.
+   The first generated day must have day_number = {starting_day_number}.
+   Increment day_number sequentially for each subsequent day.
+   Do not restart numbering from Day 1 unless starting_day_number is 1.
 
-3. The 3 options for the same day should be meaningfully different.
+3. Generate EXACTLY 3 different itinerary options for EACH day.
+
+4. The 3 options for the same day should be meaningfully different.
    Do not simply rearrange the same places.
 
-4. The itinerary should primarily focus on the user's starting and
+5. The itinerary should primarily focus on the user's starting and
    ending destinations.
 
-5. If the starting and ending destinations are the same, treat the trip
+6. If the starting and ending destinations are the same, treat the trip
    as a destination-based trip and focus on attractions within and
    around that destination.
 
-6. If the starting and ending destinations are different, create the
+7. If the starting and ending destinations are different, create the
    main itinerary around the provided starting and ending destinations.
 
-7. IMPORTANT LOCATION RULE:
+8. IMPORTANT LOCATION RULE:
    Every place included in the MAIN itinerary must be reasonably close
    to the starting destination, ending destination, or the practical
    travel route between them.
@@ -83,7 +250,7 @@ MAIN ITINERARY REQUIREMENTS
    Do NOT recommend a place that is 150 km or more away from both the
    starting and ending destinations for a normal day's itinerary.
 
-8. The itinerary must be geographically practical.
+9. The itinerary must be geographically practical.
 
    Before including a place, consider:
    - distance from the starting destination
@@ -95,61 +262,61 @@ MAIN ITINERARY REQUIREMENTS
    Places that are geographically far away or require an unrealistic
    detour must NOT be included in the main itinerary.
 
-9. Do NOT automatically add intermediate cities to the main itinerary
+10. Do NOT automatically add intermediate cities to the main itinerary
    simply because they are geographically between the starting and
    ending destinations.
 
-10. If the starting and ending destinations are the same, keep the
+11. If the starting and ending destinations are the same, keep the
     itinerary focused on that destination and nearby attractions.
     Do not select attractions from distant cities.
 
 
-11. Every itinerary day must have a clear intended city, state, and country.
+12. Every itinerary day must have a clear intended city, state, and country.
 
-12. Every place in every itinerary option must include these fields:
+13. Every place in every itinerary option must include these fields:
     - place_name
     - city
     - state
     - country
 
-13. The city, state, and country must identify the actual location
+14. The city, state, and country must identify the actual location
     of the attraction, not merely the trip's starting or ending
     destination.
 
-14. For trips involving different cities, assign attractions to
+15. For trips involving different cities, assign attractions to
     the city where they are actually located. Do not mix distant
     cities in one day's itinerary unless the travel plan realistically
     accounts for the journey.
 
-15. Use the official or commonly recognized attraction name.
+16. Use the official or commonly recognized attraction name.
     Do not append the city or country to place_name itself.
     Return location information in separate fields.
 
-16. If the exact city, state, or country is uncertain, do not invent
+17. If the exact city, state, or country is uncertain, do not invent
     a location. Use the most reliable location information available.
 
-    16A. Every place object must contain non-empty values for
+    17A. Every place object must contain non-empty values for
     "place_name", "city", "state", and "country".
 
-    16B. Every object in "optional_suggestions" must also contain
+    17B. Every object in "optional_suggestions" must also contain
      non-empty values for "place_name", "city", "state", and "country".
 
-    16C. If the location of an attraction cannot be confidently determined,
+    17C. If the location of an attraction cannot be confidently determined,
       choose another attraction whose location can be identified reliably.
 
-    16D. Before returning the JSON, verify that every place in all three
+    17D. Before returning the JSON, verify that every place in all three
     options and every optional suggestion contains all required location fields.
 
-17. The trip duration must be considered when planning the itinerary.
+18. The trip duration must be considered when planning the itinerary.
     Do not suggest an unrealistic number of places for a single day.
 
-18. Consider the user's selected preferences when choosing places and
+19. Consider the user's selected preferences when choosing places and
     activities.
 
-19. Avoid unnecessary repetition of the same attraction across options
+20. Avoid unnecessary repetition of the same attraction across options
     and days.
 
-20. Each day's 3 options must represent different budget levels:
+21. Each day's 3 options must represent different budget levels:
 
     OPTION 1:
     The most expensive / premium option of the three.
@@ -165,12 +332,12 @@ MAIN ITINERARY REQUIREMENTS
     Prefer free or low-entry-fee attractions and activities while still
     providing a useful and enjoyable itinerary.
 
-21. The budget difference between the three options should be
+22. The budget difference between the three options should be
     meaningful.
 
     Do not make all three options almost identical in total cost.
 
-22. Consider the user's TOTAL trip budget across ALL days.
+23. Consider the user's TOTAL trip budget across ALL days.
 
     The selected options across multiple days should remain reasonably
     aligned with the user's total budget.
@@ -187,12 +354,12 @@ MAIN ITINERARY REQUIREMENTS
     resulting total should consume only a smaller portion of the user's
     budget.
 
-23. The three options are independent choices for each day.
+24. The three options are independent choices for each day.
 
     Consider the combined cost if the same option level is selected
     across all days.
 
-24. Also account for mixed selections across days.
+25. Also account for mixed selections across days.
 
     For example:
 
@@ -203,14 +370,14 @@ MAIN ITINERARY REQUIREMENTS
     Such a combination should still remain reasonably appropriate for
     the user's total budget.
 
-25. NEVER force an expensive activity into an option merely to make that
+26. NEVER force an expensive activity into an option merely to make that
     option expensive.
 
     The activities and attractions must still be relevant to the user's
     preferences and destination.
 
-26. Activities involving special experiences must have realistic
-    estimated prices.
+27. Activities involving special experiences must have realistic
+   estimated prices.
 
     For example, if an option includes scuba diving, do not assume an
     unrealistically low entry fee merely because a generic activity
@@ -223,15 +390,15 @@ MAIN ITINERARY REQUIREMENTS
     Use a realistic estimated cost per person when such an activity is
     included.
 
-27. When an activity has a variable or package-based price, provide a
+28. When an activity has a variable or package-based price, provide a
     reasonable estimated price per person rather than an obviously
     unrealistic price.
 
-28. Weekend and high-demand activities may cost more than normal.
+29. Weekend and high-demand activities may cost more than normal.
     Consider this when estimating prices for activities such as scuba
     diving, adventure activities, water sports and similar experiences.
 
-29. Do not recommend an expensive activity when a suitable lower-cost
+30. Do not recommend an expensive activity when a suitable lower-cost
     alternative can provide a similar experience and the user's budget
     is limited.
 
@@ -499,136 +666,220 @@ Use exactly this general structure:
 }}
 """
 
-
     models_to_try = [
         "gemini-3.5-flash-lite",
         "gemini-3.6-flash",
         "gemini-3.8-flash",
     ]
 
-    last_error = None
-    for model in models_to_try:
-        print(f"Trying Gemini Model: {model}")
+    MAX_ATTEMPTS = 3
 
-        #try each model up to 3 times.
-        for attempt in range(1,4):
+    last_error = None
+    last_error_type = None
+
+    for model in models_to_try:
+
+        logger.info("Attempting itinerary generation using model: %s", model)
+
+        # try each model up to 3 times.
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+
+            response_text = None
+
             try:
                 response = client.models.generate_content(
-                    model = model,
-                    contents= prompt,
+                    model=model,
+                    contents=prompt,
                 )
 
-                if not response.text:
-                    raise ValueError(
-                        'Gemini returned an empty response.'
-                    )
+                response_text = response.text
 
-                #Ensure the response is valid JSON before returning.
-                itinerary = json.loads(response.text)
+                if not response_text or not response_text.strip():
+                    raise ValueError("Gemini returned an empty response.")
 
-                print(
-                    f"Itinerary generated successfully"
-                    f"using {model}."
+                # Ensure the response is valid JSON before returning.
+                itinerary = json.loads(response_text)
+
+                # Basic structure validation.
+                validate_itinerary(itinerary)
+
+                logger.info(
+                    "Itinerary generated successfully using model: %s",
+                    model,
                 )
 
                 return itinerary
+
             except json.JSONDecodeError as e:
+
                 last_error = e
+                last_error_type = "invalid_json"
 
-                print (
-                    f"{model}: Invalid JSON on attempt"
-                    f"{attempt}/3."
+                logger.warning(
+                    "Invalid JSON from model %s on attempt %s/%s. "
+                    "Line: %s, Column: %s, Error: %s",
+                    model,
+                    attempt,
+                    MAX_ATTEMPTS,
+                    e.lineno,
+                    e.colno,
+                    e.msg,
                 )
 
-                print (
-                    f'JSON error at line {e.lineno},'
-                    f'column {e.colno}: {e.msg}'
+                # Log only a small section around the invalid JSON.
+                if response_text:
+                    lines = response_text.splitlines()
+
+                    start = max(0, e.lineno - 3)
+                    end = min(len(lines), e.lineno + 2)
+
+                    for i in range(start, end):
+                        logger.debug("Response line %s: %s", i + 1, lines[i])
+
+                # Invalid output: retry this model, then try the next one.
+
+            except ValueError as e:
+
+                last_error = e
+                last_error_type = "invalid_response"
+
+                logger.warning(
+                    "Invalid response from model %s on attempt %s/%s: %s",
+                    model,
+                    attempt,
+                    MAX_ATTEMPTS,
+                    e,
                 )
 
-                #print the response around the invalid json
-                lines = response.text.splitlines()
-                start = max(0, e.lineno -3)
-                end = min(len(lines), e.lineno + 2)
-
-                for i in range (start, end):
-                    print(f"Line {i+1}: {lines[1]}")
+                # Retry this model, then try the next one.
 
             except Exception as e:
+
                 last_error = e
 
                 error_message = str(e).lower()
 
-                error_code = (
-                    getattr(e, 'code', None)
-                    or getattr(e, 'status_code', None)
+                error_code = getattr(e, "code", None) or getattr(e, "status_code", None)
+
+                # Identify model-specific availability/configuration errors.
+                model_unavailable = any(
+                    keyword in error_message
+                    for keyword in (
+                        "model not found",
+                        "model is not found",
+                        "is not supported for generatecontent",
+                    )
                 )
 
-                # errors that may be temporary
-                temporary_error = (
-                    error_code in (408, 429, 500, 502, 503, 504)
-                    or any(
-                        keyword in error_message
-                        for keyword in (
-                            'timeout',
-                            'timed out',
-                            'connection',
-                            'resource_exhausted',
-                            'service unavailable',
-                            'internal server error',
-                            'overloaded',
-                            'temporarily unavailable',
-                        )
+                if model_unavailable:
+
+                    last_error_type = "model_unavailable"
+
+                    logger.warning(
+                        "Model %s is unavailable. Moving to the next model. "
+                        "Error: %s",
+                        model,
+                        e,
                     )
-                )
-                # if the model is inavailble, try the next model.
-                model_unavilable =(
-                    error_code == 404
-                    or 'model not found' in error_message
-                    or 'not supported' in error_message
-                )
-                if model_unavilable:
-                    print(
-                        f"{model} is unavilable."
-                        "Switching to the next model."
-                    )
+
                     break
-                #do not repeatedly retry prermanent errors.
-                if not temporary_error:
-                    print(f"Non-retryable Gemini error: {e}")
 
-                    raise HTTPException (
-                        status_code = status.HTTP_502_BAD_GATEWAY,
-                        detail = ("The itinerary service could not "
-                            "process your request. Please try again "
-                            "later."
-                        ),
-                    )from e
-                print (
-                    f"{model}: Temporary faliure on attempt"
-                    f"{attempt}/3: {e}"
+                # Identify temporary API/network failures.
+                temporary_error = error_code in (408, 429, 500, 502, 503, 504) or any(
+                    keyword in error_message
+                    for keyword in (
+                        "timeout",
+                        "timed out",
+                        "connection",
+                        "resource_exhausted",
+                        "service unavailable",
+                        "internal server error",
+                        "overloaded",
+                        "temporarily unavailable",
+                    )
                 )
 
-            #wait 2 secods , then 4 secods before retries.
-            if attempt<3:
-                delay = 2 ** attempt
-                print(f" Retrying {model} in {delay} seconds...")
+                if temporary_error:
+
+                    last_error_type = "temporary_failure"
+
+                    logger.warning(
+                        "Temporary Gemini failure using %s "
+                        "(attempt %s/%s). Error code: %s. Error: %s",
+                        model,
+                        attempt,
+                        MAX_ATTEMPTS,
+                        error_code,
+                        e,
+                    )
+
+                else:
+
+                    last_error_type = "permanent_failure"
+
+                    logger.exception(
+                        "Non-retryable Gemini error using model %s",
+                        model,
+                    )
+
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=(
+                            "The itinerary service could not process "
+                            "your request. Please try again later."
+                        ),
+                    ) from e
+
+            # Retry delay: 2 seconds, then 4 seconds.
+            if attempt < MAX_ATTEMPTS:
+
+                delay = 2**attempt
+
+                logger.info(
+                    "Retrying model %s in %s seconds.",
+                    model,
+                    delay,
+                )
+
                 time.sleep(delay)
 
-        print(
-            f"{model} failed after its attempts."
-            'Moving to the next model.'
+        logger.warning(
+            "Model %s exhausted its attempts. Moving to the next model.",
+            model,
         )
-    #all model failed
-    print(f" All Gemini models failed. Last error: {last_error}")
 
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail = (
-            "Our AI Ittinerary service is experiencing hegh demand"
-            "right now. Pleace try again in 2 minutes."
-        )
+    # All configured models have failed.
+    logger.error(
+        "All Gemini models failed. Last error type: %s. Last error: %s",
+        last_error_type,
+        last_error,
     )
 
+    # Return an error appropriate to the final failure.
+    if last_error_type == "temporary_failure":
 
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "The AI itinerary service is temporarily unavailable. "
+                "Please try again in a few minutes."
+            ),
+        ) from last_error
 
+    if last_error_type in ("invalid_json", "invalid_response"):
 
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=(
+                "The AI itinerary service returned an invalid response. "
+                "Please try generating your itinerary again."
+            ),
+        ) from last_error
+
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=(
+            "The AI itinerary service is currently unavailable. "
+            "Please try again later."
+        ),
+    ) from last_error

@@ -15,6 +15,16 @@ GOOGLE_MAPS_API_KEY = os.getenv(
 
 url = "https://places.googleapis.com/v1/places:searchText"
 
+class PlaceNotFoundError(Exception):
+    """Google responded successfully, but no acceptable location was found."""
+    pass
+
+
+class GooglePlacesAPIError(Exception):
+    """Google Places API request failed or returned an API error."""
+    pass
+
+
 # https://→ Protocol used to securely communicate with Google's server
 # places.googleapis.com → Google's server/domain for the Places API
 # /v1/ → Version 1 of the API
@@ -49,10 +59,10 @@ def get_or_create_place(
         return place
 
     place_data = get_place_coordinates(
-        place_name = place_name,
-        city = city,
-        state = state,
-        country = country,
+        place_name=place_name,
+        city=city,
+        state=state,
+        country=country,
     )
 
     latitude = place_data.get("latitude")
@@ -61,17 +71,12 @@ def get_or_create_place(
     # never resuse a same-named place if its location
     # could not be resolved
 
-    if (
-        latitude is None
-        or longitude is None
-        or (latitude == 0 and longitude ==0)
-    ):
+    if latitude is None or longitude is None or (latitude == 0 and longitude == 0):
         raise ValueError(
-            f"Could not verify coordinates for "
-            f"{place_name}, {city}, {country}"
+            f"Could not verify coordinates for " f"{place_name}, {city}, {country}"
         )
 
-    #reuse a record only if its coordinates match
+    # reuse a record only if its coordinates match
     existing_place = find_place_by_coordinates(
         latitude,
         longitude,
@@ -81,7 +86,7 @@ def get_or_create_place(
     if existing_place:
         return existing_place
 
-    #same name in a different city? Save a seprate record.
+    # same name in a different city? Save a seprate record.
     place_data["place_name"] = place_name
 
     return save_place_to_db(
@@ -89,6 +94,7 @@ def get_or_create_place(
         db,
         commit=commit,
     )
+
 
 def find_place_in_db(place_name: str, db):
     place = db.query(Place).filter(Place.place_name == place_name).first()
@@ -120,43 +126,37 @@ def get_place_coordinates(
     data = {"textQuery": search_query}
 
     try:
-        response = requests.post(
-            url,
-            headers=headers,
-            json=data,
-            timeout=15
-        )
+        response = requests.post(url, headers=headers, json=data, timeout=15)
         response.raise_for_status()
         result = response.json()
 
         print("SEARCH QUERY:", search_query)
-        print("GOOGLE API RESPONSE:", result)
 
     except (requests.RequestException, ValueError) as exc:
-        print(f"Google Places lookup failed for'{place_name}': {exc}")
+        print(f"Google Places API request failed for'{place_name}': {exc}")
 
-        return {
-            "place_name": place_name,
-            "latitude": None,
-            "longitude": None,
-        }
+        raise GooglePlacesAPIError(
+            f"Google Places API request failed for '{place_name}'."
+        ) from exc
 
+    #check whether google returned an api error
+    if "error" in result:
+        print("Google Places API Error:", result["error"])
+
+        raise GooglePlacesAPIError(
+            f"Google Places API returned an error for '{place_name}'."
+        )
+    #check whether googlr maps found any matching places.
     places = result.get("places", [])
 
     if not places:
         print(f"No Google Places match found for: {search_query}")
 
-        if "error" in result:
-            print("Google Places API Error:", result["error"])
+        raise PlaceNotFoundError(
+            f"No location found for '{search_query}'."
+        )
 
-        return {
-            "place_name": place_name,
-            "latitude": None,
-            "longitude": None,
-        }
-
-    # inspect the returned result before accepting its coordinates.
-
+    # inspect the returned coordinates before accepting its coordinates.
     for place in places:
         google_place_name = place.get("displayName", {}).get("text", place_name)
         address = place.get("formattedAddress", "")
@@ -182,59 +182,43 @@ def get_place_coordinates(
                 (
                     component
                     for component in address_components
-                    if "country" in component.get('types', [])
+                    if "country" in component.get("types", [])
                 ),
                 None,
             )
-            if country_component is None:
-                print("Rejected reult: country could not be verified:",
-                      address,
+            if country_component is not None:
+                requested_country = country.strip().casefold()
+
+                country_aliases = {
+                    "india": {"india", "in"},
+                    "united states": {"united states", "us", "usa"},
+                    "united kingdom": {"united kingdom", "uk", "gb"},
+                }
+                accepted_country_names = country_aliases.get(
+                    requested_country,
+                    {requested_country},
                 )
-                continue
-            requested_country = country.strip().casefold()
 
-            country_aliases = {
-                "india": {"india", "in"},
-                "united states":{
-                    "united states",
-                    "us",
-                    "usa"
-                },
-                "united kingdom": {
-                    "united kingdom",
-                    "uk",
-                    "gb",
-                },
-            }
-            accepted_country_names = country_aliases.get(
-                requested_country,
-                {requested_country},
-            )
+                returned_country_names = {
+                    country_component.get("longText", "").strip().casefold(),
+                    country_component.get("shortText", "").strip().casefold(),
+                }
 
-            returned_country_names = {
-                country_component.get("longText", "").strip().casefold(),
-                country_component.get("shortText", "").strip().casefold(),
-            }
+                if not accepted_country_names.intersection(returned_country_names):
+                    print(
+                        "Rejected result outside requested country:",
+                        address,
+                    )
+                    continue
 
-            if not accepted_country_names.intersection(
-                returned_country_names
-            ):
-                print(
-                    "Rejected result outside requested country:",
-                    address,
-                )
-                continue
-
-        #rule 4 : Preserve your existing city behaviour/
+        # rule 4 : Preserve your existing city behaviour/
         # amistmaatch produces a warning but does not reject
         # the result, just as in your original function.
         if city and city.casefold() not in address.casefold():
             print(
-                "Rejected result outside requested city; "
-                "checking state and country validation:",
+                "City mismatch warning. Checking other validations:",
                 address,
             )
-
 
         print("Accepted Google result:", google_place_name)
         print("Latitude:", latitude)
@@ -247,11 +231,9 @@ def get_place_coordinates(
         }
 
     print(f"No verified location found for: {search_query}")
-    return {
-        "place_name": place_name,
-        "latitude": None,
-        "longitude": None,
-    }
+    raise PlaceNotFoundError(
+        f"Could not verify the location for '{search_query}'."
+    )
 
 
 def save_place_to_db(place_data, db, commit: bool = True):

@@ -174,8 +174,8 @@
           </button>
 
           <div
-            *ngIf="message"
             class="save-message"
+            [class.visible]="message"
             role="status"
           >
             {{ message }}
@@ -191,6 +191,38 @@
             {{ isSaving ? 'SAVING...' : 'SAVE UPDATED TRIP' }}
           </button>
         </div>
+      </div>
+    </div>
+    <!-- ERROR POPUP -->
+    <div
+      class="popup-overlay"
+      *ngIf="showPopup"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="popup-title"
+    >
+      <div class="popup-box">
+
+        <div class="popup-icon">
+          !
+        </div>
+
+        <h2 id="popup-title">
+          {{ popupTitle }}
+        </h2>
+
+        <p>
+          {{ popupMessage }}
+        </p>
+
+        <button
+          type="button"
+          class="popup-button"
+          (click)="closePopup()"
+        >
+          OK
+        </button>
+
       </div>
     </div>
   </body>

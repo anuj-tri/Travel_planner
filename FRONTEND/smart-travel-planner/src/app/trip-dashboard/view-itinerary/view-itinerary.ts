@@ -1,6 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { environment } from '../../../environments/environment';
@@ -16,26 +16,23 @@ export class ViewItinerary implements OnInit {
   tripDetails: any = null;
 
   // saved itinerary
-
   savedItinerary: any[] = [];
-
   selectedDayIndex: number = 0;
-
   selectedDay: any = null;
-
   tripStatus: string = '';
 
   //loading/ errro
-
   isLoading: boolean = false;
 
   message: string = '';
 
-  //trip id received from url
+  //custom makr-as-completed confirmation dialog
+  showCompleteDialog: boolean = false;
 
+  //trip id received from url
   tripId: number = 0;
 
-  //Goofle maps
+  //Google maps
   map: google.maps.Map | null = null;
   markers: google.maps.Marker[] = [];
 
@@ -68,27 +65,11 @@ export class ViewItinerary implements OnInit {
   loadTripDetails(): void {
     console.log('------loading trip details-----');
 
-    const token = localStorage.getItem('access_token');
-
-    console.log('Access token exists:', !!token);
-
-    if (!token) {
-      console.error('no access token found');
-
-      this.message = 'Please login again.';
-
-      return;
-    }
-
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${token}`,
-    });
-
-    const url = `http://127.0.0.1:8000/trips`;
+    const url = `/trips`;
 
     console.log('Calling trip details API:', url);
 
-    this.http.get<any[]>(url, { headers }).subscribe({
+    this.http.get<any[]>(url, { withCredentials: true }).subscribe({
       next: (response: any) => {
         console.log('----All trip response----');
         console.log('Response:', response);
@@ -135,28 +116,26 @@ export class ViewItinerary implements OnInit {
       return;
     }
 
-    const confirmed = confirm(
-      'Are you sure you want to maek this trip as completd? This action cannnot be undone.',
-    );
+    this.showCompleteDialog = true;
+    this.cdr.detectChanges();
+  }
 
-    if (!confirmed) {
+  // Close the dialog without completing the trip
+  cancelCompleteTrip(): void {
+    this.showCompleteDialog = false;
+    this.cdr.detectChanges();
+  }
+
+  // Complete the trip after the user confirms
+  confirmCompleteTrip(): void {
+    if (this.tripStatus !== 'missed') {
+      this.cancelCompleteTrip();
       return;
     }
 
-    const token = localStorage.getItem('access_token');
+    const url = `/trips/${this.tripId}/complete`;
 
-    if (!token) {
-      this.message = 'please login again.';
-      return;
-    }
-
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${token}`,
-    });
-
-    const url = `http://127.0.0.1:8000/trips/${this.tripId}/complete`;
-
-    this.http.patch<any>(url, {}, { headers }).subscribe({
+    this.http.patch<any>(url, {}, { withCredentials: true }).subscribe({
       next: (response) => {
         console.log('Trip marked as completed:', response);
 
@@ -165,12 +144,19 @@ export class ViewItinerary implements OnInit {
         if (this.tripDetails) {
           this.tripDetails.status = response.status;
         }
+
+        this.showCompleteDialog = false;
+        this.message = '';
+
         this.cdr.detectChanges();
       },
+
       error: (error) => {
         console.error('Failed to mark trip as completed:', error);
 
-        this.message = error.error?.detail ?? 'Failed to mark trip as completd. Please try again.';
+        this.message = error.error?.detail ?? 'Failed to mark trip as completed. Please try again.';
+
+        this.showCompleteDialog = false;
 
         this.cdr.detectChanges();
       },
@@ -185,28 +171,11 @@ export class ViewItinerary implements OnInit {
     this.isLoading = true;
     this.message = '';
 
-    const token = localStorage.getItem('access_token');
-
-    console.log('Access token exists:', !!token);
-
-    if (!token) {
-      console.error('No access token found');
-
-      this.isLoading = false;
-      this.message = 'please login again.';
-
-      return;
-    }
-
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${token}`,
-    });
-
-    const url = `http://127.0.0.1:8000/trips/${this.tripId}/View-saved-itinerary`;
+    const url = `/trips/${this.tripId}/View-saved-itinerary`;
 
     console.log('Calling backend:', url);
 
-    this.http.get<any[]>(url, { headers }).subscribe({
+    this.http.get<any[]>(url, { withCredentials: true }).subscribe({
       next: (response: any[]) => {
         console.log('----itinerary response----');
         console.log('Response:', response);
@@ -253,33 +222,36 @@ export class ViewItinerary implements OnInit {
     });
   }
 
-  //maps start friom here
+  //maps start from here
   async initializeMap(): Promise<void> {
-    const mapElement = document.getElementById('saved-itinerary-map');
+    try {
+      const mapElement = document.getElementById('saved-itinerary-map');
 
-    if (!mapElement) {
-      console.error('Map container not found.');
-      return;
+      if (!mapElement) {
+        console.error('Map container not found.');
+        return;
+      }
+
+      setOptions({
+        key: environment.googleMapsApiKey,
+        v: 'weekly',
+      });
+
+      await importLibrary('maps');
+
+      this.map = new google.maps.Map(mapElement, {
+        center: {
+          lat: 20.5937,
+          lng: 78.9629,
+        },
+        zoom: 5,
+      });
+
+      console.log('Google Map initialized.');
+      this.updateMap();
+    } catch (error) {
+      console.error('Failed to initialize Google Maps:', error);
     }
-
-    setOptions({
-      key: environment.googleMapsApiKey,
-      v: 'weekly',
-    });
-
-    await importLibrary('maps');
-
-    this.map = new google.maps.Map(mapElement, {
-      center: {
-        lat: 20.5937,
-        lng: 78.9629,
-      },
-      zoom: 5,
-    });
-
-    console.log('Google Map initialized.');
-
-    this.updateMap();
   }
 
   updateMap(): void {

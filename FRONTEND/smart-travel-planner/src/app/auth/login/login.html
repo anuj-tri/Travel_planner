@@ -20,26 +20,39 @@
             [(ngModel)]="email"
             placeholder="Enter your email address..."
             required
-          /><br /><br />
+          />
 
           <label for="password"><strong>Password:</strong></label>
-          <input
-            type="password"
-            name="password"
-            [(ngModel)]="password"
-            placeholder="Enter your password here:..."
-            required
-          /><br /><br />
 
-          <a href="" (click)="goToForgotPassword(); $event.preventDefault()">Forgot Password</a
-          ><br /><br />
+          <div class="password-wrapper">
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              name="password"
+              id="password"
+              [(ngModel)]="password"
+              placeholder="Enter your password here..."
+              required
+            />
+
+            <button
+              type="button"
+              class="toggle-password"
+              (click)="showPassword = !showPassword"
+              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            >
+              {{ showPassword ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+
+          <p>
+            <a href="" (click)="goToForgotPassword(); $event.preventDefault()"> Forgot Password </a>
+          </p>
 
           <button class="login-btn" type="submit">Login</button>
 
           <p>
-            Don't have an account?"<button class="signup-btn" type="button" (click)="goToSignup()">
-              Sign Up
-            </button>
+            Don't have an account?
+            <button class="signup-btn" type="button" (click)="goToSignup()">Sign Up</button>
           </p>
 
           <p *ngIf="message" class="success-message">{{ message }}</p>

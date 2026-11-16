@@ -50,6 +50,7 @@
   min-width: 150px;
   text-align: center;
   box-sizing: border-box;
+  display: flex;
 }
 
 .detail-label {
@@ -58,7 +59,7 @@
   font-weight: 600;
 }
 
-.detail-item span:last-child {
+.details-item span:last-child {
   color: rgb(0, 0, 0);
   font-size: 16px;
   font-weight: 600;
@@ -72,7 +73,7 @@
   border-radius: 16px;
   padding: 30px;
   box-shadow: 0 4px 12px lightgray;
-  margin-top: 25px 40px 0 40px;
+  margin: 25px 40px 0 40px;
   font-family: Arial, sans-serif;
 }
 
@@ -167,7 +168,7 @@
 
 /*places*/
 
-.place-container {
+.places-container {
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -252,32 +253,38 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  margin-top: 30px;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 20px;
   padding-top: 20px;
-
   border-top: 2px solid gray;
+  box-sizing: border-box;
 }
 
 /*day prgress*/
 
 .day-progress {
   display: flex;
+  flex: 1 1 auto;
   gap: 10px;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .day-progress span {
+  flex: 0 0 auto;
+  white-space: nowrap;
   background-color: rgb(85, 83, 83);
   color: rgb(240, 234, 234);
-
   padding: 8px 14px;
-
   border-radius: 20px;
-
   font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
 }
+
 .day-progress span:hover {
   background-color: black;
   color: white;
@@ -295,6 +302,9 @@
 /*next button*/
 
 .next-button {
+  flex: 0 0 auto;
+  min-width: 155px;
+  white-space: nowrap;
   border: none;
   background-color: rgb(85, 83, 83);
   color: white;
@@ -315,6 +325,10 @@
   background-color: rgb(0, 0, 0);
 }
 
+.next-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 /*save*/
 
 .save-button {
@@ -337,6 +351,161 @@
 .save-button:hover {
   background-color: darkgreen;
 }
+
+
+
+/* Save itinerary status message */
+
+.save-message {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background-color: #fce8e6;
+  color: #b3261e;
+  border: 1px solid #f5c2be;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* Disabled save button while saving */
+
+.save-button:disabled {
+  background-color: #a5a5a5;
+  cursor: not-allowed;
+  opacity: 0.8;
+  transform: none;
+}
+
+.save-button:disabled:hover {
+  background-color: #a5a5a5;
+}
+
+.save-message-container {
+  flex: 0 0 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  order: 10;
+  box-sizing: border-box;
+}
+
+/* ============================= */
+/* ERROR POPUP */
+/* ============================= */
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 100%;
+
+  background-color: rgba(0, 0, 0, 0.6);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 99999;
+
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.popup-box {
+  width: 100%;
+  max-width: 450px;
+
+  background-color: white;
+
+  border-radius: 14px;
+
+  padding: 30px;
+
+  box-sizing: border-box;
+
+  text-align: center;
+
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+
+  animation: popupAppear 0.25s ease-out;
+}
+
+.popup-icon {
+  width: 55px;
+  height: 55px;
+
+  margin: 0 auto 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background-color: #fce8e6;
+  color: #b3261e;
+
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.popup-box h2 {
+  color: #222;
+  font-size: 21px;
+
+  margin: 0 0 15px;
+}
+
+.popup-box p {
+  color: #555;
+
+  font-size: 15px;
+  line-height: 1.6;
+
+  margin-bottom: 25px;
+}
+
+.popup-button {
+  min-width: 100px;
+
+  padding: 11px 25px;
+
+  border: none;
+  border-radius: 7px;
+
+  background-color: seagreen;
+  color: white;
+
+  font-size: 15px;
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.popup-button:hover {
+  background-color: darkgreen;
+}
+
+@keyframes popupAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 
 /*responsive design */
 @media (max-width: 1000px) {
@@ -364,7 +533,7 @@
 
   .navigation {
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     align-items: stretch;
   }
 
@@ -376,5 +545,18 @@
   .next-button,
   .save-button {
     width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+  .popup-box {
+    padding: 24px 18px;
+  }
+
+  .popup-box h2 {
+    font-size: 18px;
+  }
+
+  .popup-box p {
+    font-size: 14px;
   }
 }

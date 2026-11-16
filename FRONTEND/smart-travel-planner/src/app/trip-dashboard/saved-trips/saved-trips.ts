@@ -1,6 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 
 @Component({
@@ -18,6 +18,9 @@ export class SavedTrips implements OnInit {
 
   //message for errors
   message: string = '';
+  // Custom delete confirmation dialog
+  showDeleteDialog: boolean = false;
+  tripIdToDelete: number | null = null;
 
   constructor(
     private http: HttpClient,
@@ -37,26 +40,9 @@ export class SavedTrips implements OnInit {
     this.isLoading = true;
     this.message = '';
 
-    const token = localStorage.getItem('access_token');
-
-    console.log('Token exists:', !!token);
-
-    if (!token) {
-      console.error('NO ACCESS TOKEN FOUND');
-
-      this.isLoading = false;
-      this.message = 'Please login again.';
-      return;
-    }
-
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${token}`,
-    });
-
     console.log('Calling backend...');
-    console.log('URL: http://localhost:8000/trips');
 
-    this.http.get<any[]>('http://localhost:8000/trips', { headers }).subscribe({
+    this.http.get<any[]>('/trips', { withCredentials: true }).subscribe({
       next: (response: any[]) => {
         console.log('===== SUCCESS =====');
         console.log('Response:', response);
@@ -97,48 +83,44 @@ export class SavedTrips implements OnInit {
 
   //Delete Trip
   deleteTrip(tripId: number): void {
-    console.log('Delete trip:', tripId);
+    this.tripIdToDelete = tripId;
+    this.showDeleteDialog = true;
+  }
 
-    const confirmDelete = confirm('Are you sure you want to delete this trip?');
+  //close the dialog without deleting the trip
+  cancelDelete(): void {
+    this.showDeleteDialog = false;
+    this.tripIdToDelete = null;
+  }
 
-    if (!confirmDelete) {
+  //Delete the trip after the user confirms
+  confirmDelete(): void {
+    if (this.tripIdToDelete === null){
       return;
     }
 
-    const token = localStorage.getItem('access_token');
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    });
+    const tripId = this.tripIdToDelete;
 
     this.http
-      .delete(`http://localhost:8000/trips/${tripId}`, {
-        headers: headers,
+      .delete(`/trips/${tripId}`,{
+        withCredentials: true,
       })
       .subscribe({
-        //Success
         next: (response) => {
           console.log('Trip deleted successfully:', response);
 
-          // remove deleted trip from screen
-          this.savedTrip = this.savedTrip.filter((trip) => trip.trip_id !== tripId);
-
-          console.log('Updated savedTrip:', this.savedTrip);
-
-          //Force Angular to update the UI
+          this.savedTrip = this.savedTrip.filter(
+            (trip) => trip.trip_id !== tripId,
+          );
+          this.showDeleteDialog = false;
+          this.tripIdToDelete = null;
           this.cdr.detectChanges();
         },
-        //error
-
         error: (error) => {
-          console.error('Error fetching saved trips:', error);
-          console.error('Status:', error.status);
-          console.log('Status Text:', error.statusText);
-          console.log('URL:', error.url);
-          console.error('Backend error details:', error.error);
-
-          this.isLoading = false;
-          this.message = 'Failed to load saved trips.';
+          console.error('Error deleting trip:', error);
+          this.message = 'Failed to delete trip.';
+          this.cancelDelete();
+          this.cdr.detectChanges();
         },
       });
   }

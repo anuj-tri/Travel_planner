@@ -1,9 +1,15 @@
 import json
 
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, time
 from zoneinfo import ZoneInfo
 
-from app.services.google_places import (get_or_create_place, save_itinerary_place, get_place_coordinates,)
+from app.services.google_places import (
+    get_or_create_place,
+    save_itinerary_place,
+    get_place_coordinates,
+    PlaceNotFoundError,
+    GooglePlacesAPIError,
+    )
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -44,6 +50,30 @@ def update_trip_status(trip):
 
     else:
         trip.status = "missed"
+
+def get_trip_edit_mode(trip):
+
+
+    india_timezone = ZoneInfo("Asia/Kolkata")
+    now = datetime.now(india_timezone)
+
+
+
+    #after the trip's end date  allow full modification
+    if now.date() > trip.end_date:
+        return "full_edit"
+
+    #noon cutoff on the original trip start date
+    cutoff_time = datetime.combine(
+        trip.start_date,
+        time(12, 0),
+        tzinfo=india_timezone,
+    )
+
+    if now < cutoff_time:
+        return "full_edit"
+
+    return "restricted_edit"
 
 
 # CREATE TRIP
@@ -110,6 +140,7 @@ def generate_itinerary_service(
     trip_id: int,
     db: Session,
     current_user: Users,
+    starting_day_number: int = 1,
 ):
 
     trip = (
@@ -143,6 +174,7 @@ def generate_itinerary_service(
         no_of_travellers=trip.no_of_travellers,
         budget=trip.budget,
         preferences=[preference.preference_type for preference in preferences],
+        starting_day_number=starting_day_number,
     )
 
     return {"trip_id": trip.trip_id, "itinerary": itinerary}
@@ -212,14 +244,44 @@ def save_itinerary_service(
                 place_name = place_name.strip()
                 print(place_name)
 
-                saved_place = get_or_create_place(
-                    place_name = place_name,
-                    db=db,
-                    city = place.get('city'),
-                    state = place.get('state'),
-                    country = place.get('country'),
-                    commit = False,
-                )
+
+                try:
+                    saved_place = get_or_create_place(
+                        place_name = place_name,
+                        db=db,
+                        city = place.get('city'),
+                        state = place.get('state'),
+                        country = place.get('country'),
+                        commit = False,
+                    )
+                except PlaceNotFoundError as exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail = {
+                            "code": "PLACE_NOT_FOUND",
+                            "message": (
+                                f"We couldn't verify the location for Day "
+                                f"{itinerary.day_number}. Please select a different "
+                                f"option for Day {itinerary.day_number}."
+                            ),
+                            "day_number": itinerary.day_number,
+                            "place_name": place_name,
+                        },
+                    )from exc
+                except GooglePlacesAPIError as exc:
+                    raise HTTPException(
+                        status_code= status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail= {
+                            "code": "GOOGLE_API_FAILURE",
+                            "message":(
+                                "We're temporarily unable to verify locations. "
+                                "Please try saving your itinerary again in 3 minutes."
+                            ),
+                            "day_number": itinerary.day_number,
+                            "place_name": place_name,
+                            "retry_after_seconds": 180,
+                        },
+                    ) from exc
                 print(
                     "saved places:",
                     saved_place.place_name,
@@ -241,14 +303,10 @@ def save_itinerary_service(
         for itinerary in new_itineraries:
             db.refresh(itinerary)
 
-        last_itinerary = new_itineraries[-1]
-
         return {
             "message": "Itinerary saved successfully",
-            "itinerary_id": last_itinerary.itinerary_id,
-            "trip_id": last_itinerary.trip_id,
-            "day_number": last_itinerary.day_number,
-            "itinerary_data": last_itinerary.itinerary_data,
+            "itinerary_days_saved": len(new_itineraries),
+            "trip_id": trip_id,
         }
     except Exception:
         db.rollback()
@@ -440,6 +498,7 @@ def get_saved_trips_service(
         .join(Itinerary, Itinerary.trip_id == Trip.trip_id)
         .filter(Trip.user_id == current_user.user_id)
         .distinct()
+        .order_by(Trip.trip_id.desc())
         .all()
     )
 
@@ -485,7 +544,7 @@ def mark_trip_completed_service(
     if not trip:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detaisl="Trip not found.",
+            detail="Trip not found.",
         )
 
     today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
@@ -535,12 +594,14 @@ def get_trip_edit_details_service(
             detail = 'Trip not found',
         )
 
-    #only upcoming and missed can be modified here.
-    if trip.status not in ("upcoming", "missed"):
+
+    if trip.status == "completed":
         raise HTTPException(
             status_code = status.HTTP_400_BAD_REQUEST,
-            detail= "only upcoming or missed trips can be modified",
+            detail= "Completed trips cannot be modified",
         )
+
+    edit_mode = get_trip_edit_mode(trip)
 
     # get the preference associated with this trip
     trip_preferences = (
@@ -564,16 +625,18 @@ def get_trip_edit_details_service(
         'budget': trip.budget,
         "status": trip.status,
         "preference_ids": preference_ids,
+        "edit_mode": edit_mode,
     }
 
-#preview modified itineraey - no datatbase changes
+
+# Preview modified itinerary - No database changes
 def preview_modified_itinerary_service(
         trip_id: int,
         request: PreviewModifiedTripRequest,
         db: Session,
         current_user: Users,
 ):
-    #1.checking that the trip exists and belongs to the logged-in user
+    # 1. Check that the trip exists and belongs to the logged-in user
     trip = (
         db.query(Trip)
         .filter(
@@ -582,24 +645,23 @@ def preview_modified_itinerary_service(
         )
         .first()
     )
+
     if not trip:
         raise HTTPException(
-            status_code= status.HTTP_404_NOT_FOUND,
-            detail = 'Trip not found',
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Trip not found",
         )
 
-    if trip.status not in ("upcoming", "missed"):
+    # 2. Validate trip status
+    if trip.status == "completed":
         raise HTTPException(
-            status_code= status.HTTP_400_BAD_REQUEST,
-            detail = 'Only upcoming or missed trips can be modified',
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Completed trips cannot be modified",
         )
 
-    if request.end_date< request.start_date:
-        raise HTTPException(
-            status_code= status.HTTP_400_BAD_REQUEST,
-            detail= "End date cannot be before start date",
-        )
+    edit_mode = get_trip_edit_mode(trip)
 
+    # 5. Validate preferences
     preference_ids = set(request.preference_ids)
 
     preferences = (
@@ -611,25 +673,70 @@ def preview_modified_itinerary_service(
     if len(preferences) != len(preference_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail = "One or more prefrence IDs are invalid",
+            detail="One or more preference IDs are invalid",
         )
 
-    itinerary = generate_gemini_itinerary(
-        starting_destination= request.starting_destination,
-        ending_destination=request.ending_destination,
-        start_date=request.start_date,
-        end_date = request.end_date,
-        no_of_travellers= request.no_of_travellers,
-        budget = request.budget,
-        preferences=[
-            preference.preference_type
-            for preference in preferences
-        ],
-    )
+    # 6. Prepare common updated preferences
+    itinerary_preferences = [
+        preference.preference_type
+        for preference in preferences
+    ]
+
+    # Validate dates and determine itinerary generation range
+
+    if edit_mode == "full_edit":
+
+        if request.end_date < request.start_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="End date cannot be before start date",
+            )
+
+        # Generate the entire itinerary starting from Day 1
+        itinerary = generate_gemini_itinerary(
+            starting_destination=request.starting_destination,
+            ending_destination=request.ending_destination,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            no_of_travellers=request.no_of_travellers,
+            budget=request.budget,
+            preferences=itinerary_preferences,
+        )
+
+    else:
+
+        tomorrow = (
+            datetime.now(ZoneInfo("Asia/Kolkata")).date()
+            + timedelta(days=1)
+        )
+
+        if request.end_date < tomorrow:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="End date must be tomorrow or a later date",
+            )
+
+        starting_day_number = (
+            tomorrow - trip.start_date
+        ).days + 1
+
+        itinerary = generate_gemini_itinerary(
+            starting_destination=trip.starting_destination,
+            ending_destination=request.ending_destination,
+            start_date=tomorrow,
+            end_date=request.end_date,
+            no_of_travellers=request.no_of_travellers,
+            budget=request.budget,
+            preferences=itinerary_preferences,
+            starting_day_number=starting_day_number,
+        )
+
     return {
         "trip_id": trip.trip_id,
-        "itinerary": itinerary
+        "itinerary": itinerary,
     }
+
+
 
 def save_modified_trip_service(
         trip_id: int,
@@ -652,37 +759,90 @@ def save_modified_trip_service(
             detail = 'Trip not found',
         )
 
-    if trip.status not in ("upcoming", "missed"):
+    if trip.status == "completed":
         raise HTTPException(
             status_code = status.HTTP_400_BAD_REQUEST,
-            detail ="only upcoming or missed trips can be modified",
+            detail ="Completed trips cannot be modified",
         )
 
-    if request.end_date < request.start_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail = "End date can not be before the start date"
+    edit_mode = get_trip_edit_mode(trip)
+
+
+    # Determine the itinerary generation range
+
+    if edit_mode == "full_edit":
+
+        if request.end_date < request.start_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="End date cannot be before the start date",
+            )
+
+        starting_day_number = 1
+
+        expected_itinerary_count = (
+            request.end_date - request.start_date
+        ).days + 1
+
+    else:
+
+        tomorrow = (
+            datetime.now(ZoneInfo("Asia/Kolkata")).date()
+            + timedelta(days=1)
         )
+
+        if request.end_date < tomorrow:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="End date must be tomorrow or a later date",
+            )
+
+        starting_day_number = (
+            tomorrow - trip.start_date
+        ).days + 1
+
+        expected_itinerary_count = (
+            request.end_date - tomorrow
+        ).days + 1
+
+
+    # Validate itinerary days
+
     if not request.itineraries:
         raise HTTPException(
-            status_code = status.HTTP_400_BAD_REQUEST,
-            detail = 'At least one itinerary day is required',
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one itinerary day is required",
         )
-    day_number = [
+
+    day_numbers = [
         day.day_number for day in request.itineraries
     ]
 
-    if len(day_number) != len(set(day_number)):
+    if len(day_numbers) != len(set(day_numbers)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Duplicate itinerary day number are not allowed",
+            detail="Duplicate itinerary day numbers are not allowed",
         )
 
-    if sorted (day_number) != list(range(1, len(day_number) +1)):
-        raise HTTPException(
-            status_code = status.HTTP_400_BAD_REQUEST,
-            detail = "Itinerary days must be numbered consecutively from 1",
+    expected_day_numbers = list(
+        range(
+            starting_day_number,
+            starting_day_number + expected_itinerary_count,
         )
+    )
+
+    if sorted(day_numbers) != expected_day_numbers:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Itinerary days must be numbered consecutively from the expected starting day",
+        )
+
+    if len(request.itineraries) != expected_itinerary_count:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The number of itinerary days must match the selected trip dates",
+        )
+
 
     preference_ids = set(request.preference_ids)
 
@@ -701,9 +861,19 @@ def save_modified_trip_service(
         )
 
     try:
-        trip.starting_destination = request.starting_destination
-        trip.ending_destination = request.ending_destination
-        trip.start_date = request.start_date
+        # Update trip details
+        if edit_mode == "full_edit":
+
+            # entire trip cqn be modified
+            trip.starting_destination = request.starting_destination
+            trip.ending_destination = request.ending_destination
+            trip.start_date = request.start_date
+
+        else:
+            # Restricted ongoing modification
+            # Starting destination and start date remain unchanged
+            trip.ending_destination = request.ending_destination
+
         trip.end_date = request.end_date
         trip.no_of_travellers = request.no_of_travellers
         trip.budget = request.budget
@@ -721,25 +891,39 @@ def save_modified_trip_service(
                     preference_id = preference_id,
                 )
             )
-        old_itineraries = (
-            db.query(Itinerary)
-            .filter(Itinerary.trip_id == trip_id)
-            .all()
+       # Fetch existing itinerary days that need replacement
+        old_itineraries_query = db.query(Itinerary).filter(
+            Itinerary.trip_id == trip_id
         )
 
-        old_itinerary_ids =[
+        if edit_mode == "restricted_edit":
+
+            #Preserve past and current days
+            # Delete tomorrow onwards
+            old_itineraries_query = old_itineraries_query.filter(
+                Itinerary.day_number >= starting_day_number
+            )
+
+        old_itineraries = old_itineraries_query.all()
+
+        old_itinerary_ids = [
             itinerary.itinerary_id
             for itinerary in old_itineraries
         ]
 
         if old_itinerary_ids:
+
+            # Delete associated place mappings first
             db.query(ItineraryPlace).filter(
                 ItineraryPlace.itinerary_id.in_(old_itinerary_ids)
             ).delete(synchronize_session=False)
 
+            # Delete only the selected itinerary days
             db.query(Itinerary).filter(
                 Itinerary.itinerary_id.in_(old_itinerary_ids)
             ).delete(synchronize_session=False)
+
+
 
         #save the newly selected itinerary for each day.
         for itinerary_day in request.itineraries:
@@ -814,20 +998,41 @@ def save_modified_trip_service(
                 country = country.strip()
                 try:
                     coordinates = get_place_coordinates(
-                        place_name =place_name,
-                        city=city.strip(),
-                        state= state.strip(),
-                        country = country.strip(),
-                        )
-                except Exception as exc:
-                    raise HTTPException(
-                        status_code=status.HTTP_502_BAD_GATEWAY,
-                        detail= (
-                            f"Could not retrieve coordinates"
-                            f"for {place_name}"
-                        ),
-                    )from exc
+                        place_name=place_name,
+                        city=city,
+                        state=state,
+                        country=country,
+                    )
 
+                except PlaceNotFoundError as exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail={
+                            "code": "PLACE_NOT_FOUND",
+                            "message": (
+                                f"We couldn't verify the location for Day "
+                                f"{itinerary_day.day_number}. Please select a different "
+                                f"option for Day {itinerary_day.day_number}."
+                            ),
+                            "day_number": itinerary_day.day_number,
+                            "place_name": place_name,
+                        },
+                    ) from exc
+
+                except GooglePlacesAPIError as exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail={
+                            "code": "GOOGLE_API_FAILURE",
+                            "message": (
+                                "We're temporarily unable to verify locations. "
+                                "Please try saving your itinerary again in 3 minutes."
+                            ),
+                            "day_number": itinerary_day.day_number,
+                            "place_name": place_name,
+                            "retry_after_seconds": 180,
+                        },
+                    ) from exc
                 latitude = coordinates.get("latitude")
                 longitude = coordinates.get("longitude")
 
@@ -838,11 +1043,17 @@ def save_modified_trip_service(
                     or (latitude == 0 and longitude == 0)
                 ):
                     raise HTTPException(
-                        status_code = status.HTTP_502_BAD_GATEWAY,
-                        detail = (
-                            f"Could not verify the location"
-                            f"of {place_name} in {city}, {state}, {country}"
-                        ),
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail={
+                            "code": "PLACE_NOT_FOUND",
+                            "message": (
+                                f"We couldn't verify the location for Day "
+                                f"{itinerary_day.day_number}. Please select a different "
+                                f"option for Day {itinerary_day.day_number}."
+                            ),
+                            "day_number": itinerary_day.day_number,
+                            "place_name": place_name,
+                        },
                     )
 
                 print(

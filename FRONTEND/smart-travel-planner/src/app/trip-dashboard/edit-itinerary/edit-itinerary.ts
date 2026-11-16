@@ -1,7 +1,7 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
 
@@ -21,6 +21,11 @@ export class EditItinerary {
 
   message: string = '';
   isSaving: boolean = false;
+
+  // Error popup properties
+  showPopup: boolean = false;
+  popupTitle: string = '';
+  popupMessage: string = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -47,6 +52,26 @@ export class EditItinerary {
       ).fill(null);
     }
     console.log('Initial selections:', this.selectedOptions);
+  }
+
+  // Display error popup
+  showErrorPopup(title: string, message: string): void {
+
+    this.popupTitle = title;
+    this.popupMessage = message;
+    this.showPopup = true;
+
+    // Immediately update the page to display popup
+    this.cdr.detectChanges();
+  }
+
+  // Close error popup
+  closePopup(): void {
+
+    this.showPopup = false;
+
+    // Immediately update the page to remove popup
+    this.cdr.detectChanges();
   }
 
   selectOption(optionNumber: number): void {
@@ -115,22 +140,30 @@ export class EditItinerary {
       return;
     }
     if (!this.itineraryData?.days?.length) {
-      this.message = 'No itinerary is avaialble to save.';
+      this.message = 'No itinerary is available to save.';
       return;
     }
 
     if (!this.modifiedTrip) {
-      this.message = 'Modified trip details are missing. Please edit the treip again.';
+      this.message = 'Modified trip details are missing. Please edit the trip again.';
       return;
     }
 
 
-    const allDaysSelected = this.selectedOptions.every(
-      (option) => option !== null,
-    );
+    const unselectedDays = this.selectedOptions
+      .map((option, index) =>
+        option === null
+          ? this.itineraryData.days[index].day_number
+          : null,
+      )
+      .filter((dayNumber) => dayNumber !== null);
 
-    if(!allDaysSelected) {
-      this.message = 'Please select an option for every day.';
+    if(unselectedDays.length > 0) {
+      const dayList = unselectedDays
+        .map((dayNumber) => `Day ${dayNumber}`)
+        .join(', ')
+
+      this.message = `You have not selected an option for these days: ${dayList}.`;
       return;
     }
 
@@ -155,14 +188,7 @@ export class EditItinerary {
         (day: any) => !day.itinerary_data,
       )
     ) {
-      this.message = 'Could you find one of your selected options.';
-      return;
-    }
-
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      this.message = 'Your Session has expired.Please log in again.';
+      this.message = 'Could not find one of your selected options.';
       return;
     }
 
@@ -182,38 +208,102 @@ export class EditItinerary {
       return;
     }
 
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    });
-
     this.isSaving = true;
     this.message = 'Saving your updated trip...';
 
+    this.cdr.detectChanges();
+
     console.log('Update request body:', requestBody);
 
-    this.http.put(`http://127.0.0.1:8000/trips/${this.tripId}/save-modified-trip`,
+    this.http.put(`/trips/${this.tripId}/save-modified-trip`,
       requestBody,
-      { headers },
+      { withCredentials: true },
     )
     .pipe(
       finalize(() => {
         this.isSaving = false;
+        this.cdr.detectChanges();
       }),
     )
     .subscribe ({
-      next: (response: any) => {
+      next: () => {
         this.message = 'Your new trip has been saved successfully!';
-        console.log('Trip update response:', response);
+        this.cdr.detectChanges();
 
         setTimeout(() => {
-          this.router.navigate(['/trip-dashboard/modify-trip']);
+          this.router.navigate(['/trip-dashboard/saved-trips']);
         }, 1000);
       },
-      error: (error) =>{
-        console.error('Error updating trip:', error);
 
-      this.message = error.error?.detail || 'Could not update your trip. Please try again.';
+      // ERROR
+      error: (error) => {
+
+        console.error('Error updating trip:', error);
+        console.error('Backend error details:', error.error);
+
+        const detail = error.error?.detail;
+
+        // CASE 1: 422 - PLACE NOT FOUND
+        if (
+          error.status === 422 &&
+          detail?.code === 'PLACE_NOT_FOUND'
+        ) {
+
+          const dayNumber = detail.day_number;
+          const placeName = detail.place_name;
+
+          this.showErrorPopup(
+            'Unable to Save Updated Trip',
+            `We couldn't find or verify "${placeName}" for Day ${dayNumber}. ` +
+            `Please select a different itinerary option for Day ${dayNumber} and try saving again.`
+          );
+        }
+
+        // CASE 2: 503 - GOOGLE PLACES API FAILURE
+        else if (
+          error.status === 503 &&
+          detail?.code === 'GOOGLE_API_FAILURE'
+        ) {
+
+          this.showErrorPopup(
+            'Google Places Service Unavailable',
+            detail.message ||
+              'Google Places service is temporarily unavailable. Please wait 4–5 minutes and try saving your updated trip again.'
+          );
+        }
+
+        // CASE 3: OTHER 422 ERRORS
+        else if (error.status === 422) {
+
+          const errorMessage =
+            typeof detail === 'string'
+              ? detail
+              : detail?.message ||
+                "We couldn't verify one or more places. Please try again.";
+
+          this.showErrorPopup(
+            'Unable to Save Updated Trip',
+            errorMessage
+          );
+        }
+
+        // CASE 4: CONNECTION FAILURE
+        else if (error.status === 0) {
+
+          this.showErrorPopup(
+            'Connection Error',
+            'Unable to connect to the server. Please check your internet connection and try again.'
+          );
+        }
+
+        // CASE 5: OTHER ERRORS
+        else {
+          this.showErrorPopup(
+            'Unable to Save Updated Trip',
+            "We couldn't update your trip right now. Please try again."
+          );
+        }
+        this.cdr.detectChanges();
       },
     });
   }

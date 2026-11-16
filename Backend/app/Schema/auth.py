@@ -1,4 +1,3 @@
-from datetime import date
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -43,7 +42,6 @@ class ResetPasswordRequest(BaseModel):
 
 
 # current user response model
-
 class CurrentUserResponse(BaseModel):
     user_id: int
     first_name: str
@@ -76,12 +74,6 @@ class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
     confirm_new_password: str
-
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
-
-class LogoutRequest(BaseModel):
-    refresh_token: str
 
 class ValidateResetTokenRequest(BaseModel):
     token: str

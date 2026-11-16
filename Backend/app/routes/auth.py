@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status, Depends, Response, Cookie, HTTPException
 
 from app.Schema.auth import (
     SignupRequest,
@@ -11,8 +11,6 @@ from app.Schema.auth import (
     UpdateProfileRequest,
     UpdateProfileResponse,
     ChangePasswordRequest,
-    RefreshTokenRequest,
-    LogoutRequest,
     ValidateResetTokenRequest,
 )
 
@@ -47,28 +45,105 @@ def signup(request: SignupRequest, db: Session = Depends(get_db)):
 
 
 # LOGIN
-@router.post("/login", response_model=LoginResponse, status_code=status.HTTP_200_OK)
-def login(request: LoginRequest, db: Session = Depends(get_db)):
+@router.post("/login", status_code=status.HTTP_200_OK)
+def login(
+    request: LoginRequest,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    result = login_service(request, db)
 
-    return login_service(request, db)
+    access_token = result.pop("access_token")
+    refresh_token = result.pop("refresh_token")
+
+    response.set_cookie(
+        key ="access_token",
+        value = access_token,
+        httponly=True,
+        secure = False,
+        samesite="lax",
+        max_age= 7* 60,
+        path = "/",
+    )
+    response.set_cookie(
+        key ="refresh_token",
+        value = refresh_token,
+        httponly = True,
+        secure = False,
+        samesite="lax",
+        max_age = 7 * 24 * 60 *60,
+        path ="/",
+    )
+
+    return result
 
 
 # REFRESH TOKEN
 @router.post("/refresh", status_code=status.HTTP_200_OK)
 def refresh_token(
-    request: RefreshTokenRequest,
+    response: Response,
     db: Session = Depends(get_db),
+    refresh_token: str | None = Cookie(default = None),
 ):
-    return refresh_token_service(request, db)
+    if not refresh_token:
+        raise HTTPException(
+            status_code = status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token is missing",
+        )
+    result = refresh_token_service(refresh_token, db)
+
+    access_token = result.pop("access_token")
+    new_refresh_token = result.pop("refresh_token")
+
+    response.set_cookie(
+        key = "access_token",
+        value = access_token,
+        httponly = True,
+        secure = False,
+        samesite = "lax",
+        max_age = 7* 60,
+        path ="/",
+    )
+
+    response.set_cookie(
+        key = "refresh_token",
+        value = new_refresh_token,
+        httponly = True,
+        secure = False,
+        samesite = "lax",
+        max_age = 7* 24* 60 *60,
+        path ="/",
+    )
+
+    return {"message": "Token refreshed successfully"}
 
 
 # LOGOUT
 @router.post("/logout", status_code=status.HTTP_200_OK)
 def logout(
-    request: LogoutRequest,
+    response: Response,
+    refresh_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ):
-    return logout_service(request, db)
+    if refresh_token:
+        logout_service(refresh_token, db)
+
+    response.delete_cookie(
+        key = "access_token",
+        path = "/",
+        httponly=True,
+        secure = False,
+        samesite ="lax",
+    )
+
+    response.delete_cookie(
+        key = "refresh_token",
+        path = "/",
+        httponly=True,
+        secure = False,
+        samesite ="lax",
+    )
+    return {"message": "Logout successful"}
 
 
 # FORGOIT PASSWORD

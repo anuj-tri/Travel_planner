@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Encryption } from '../../services/encryption';
 
 @Component({
   selector: 'app-reset-password',
@@ -21,12 +22,17 @@ export class ResetPassword {
 
   isValidating = true;
   isLinkValid = false;
+  isSubmitting = false;
+
+  showNewPassword = false;
+  showConfirmPassword = false;
 
   constructor(
     private http: HttpClient,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
+    private encryption: Encryption,
   ) {
     //Get the password reset token from URL
     this.route.queryParams.subscribe((params) => {
@@ -40,28 +46,32 @@ export class ResetPassword {
       this.validateResetToken();
     });
   }
-  validateResetToken(): void{
+  validateResetToken(): void {
     this.isValidating = true;
     this.isLinkValid = false;
 
-    this.http.post<{ valid: boolean}>(
-      'http://localhost:8000/auth/validate-reset-token',
-      { token: this.token}
-    ).subscribe ({
-      next: (response) => {
-        this.isLinkValid = response.valid === true;
-        this.isValidating = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.isLinkValid = false;
-        this.isValidating = false;
-        this.cdr.detectChanges();
-      }
-    });
+    this.http
+      .post<{ valid: boolean }>('/auth/validate-reset-token', { token: this.token })
+      .subscribe({
+        next: (response) => {
+          this.isLinkValid = response.valid === true;
+          this.isValidating = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.isLinkValid = false;
+          this.isValidating = false;
+          this.cdr.detectChanges();
+        },
+      });
   }
 
-  resetPassword() {
+  async resetPassword(): Promise<void> {
+    //prevent multiple submissions
+    if (this.isSubmitting) {
+      return;
+    }
+
     //clear the previous messages
     this.message = '';
     this.errorMessage = '';
@@ -100,39 +110,69 @@ export class ResetPassword {
       return;
     }
 
-    const resetPasswordData = {
-      token: this.token,
-      new_password: this.newPassword,
-      confirm_password: this.confirmPassword,
-    };
+    this.isSubmitting = true;
 
-    this.http.post('http://localhost:8000/auth/reset-password', resetPasswordData).subscribe({
-      next: (response: any) => {
-        console.log('password reset successful:', response);
+    try {
+      //Encrypt both password afileds using RSA-OAEP
 
-        this.message = 'Password reset successful.';
+      const encryptedPassword = await this.encryption.encryptPassword(this.newPassword);
 
-        this.cdr.detectChanges();
+      const encryptedConfirmPassword = await this.encryption.encryptPassword(this.confirmPassword);
 
-        setTimeout(() => {
-          this.router.navigate(['/login']);
-        }, 1500);
-      },
+      //clear plaintext passwords from component properties
+      this.newPassword = '';
+      this.confirmPassword = '';
 
-      error: (error) => {
-        console.error('Password reset failed:', error);
-        console.log('Status:', error.status);
-        console.log('Error body', error.error);
+      const resetPasswordData = {
+        token: this.token,
+        new_password: encryptedPassword,
+        confirm_password: encryptedConfirmPassword,
+      };
 
-        if (error.error?.detail) {
-          this.errorMessage = error.error.detail;
-        } else {
-          this.errorMessage = 'Something went wrong. Please Try again.';
-        }
+      this.http.post('/auth/reset-password', resetPasswordData).subscribe({
+        next: (response: any) => {
+          this.isSubmitting = false;
 
-        this.cdr.detectChanges();
-      },
-    });
+          console.log('password reset successful:', response);
+
+          this.message = 'Password reset successful.';
+
+          this.cdr.detectChanges();
+
+          setTimeout(() => {
+            this.router.navigate(['/login']);
+          }, 1500);
+        },
+
+        error: (error) => {
+          this.isSubmitting = false;
+
+          console.error('Password reset failed:', error);
+          console.log('Status:', error.status);
+          console.log('Error body:', error.error);
+
+          if (error.error?.detail) {
+            this.errorMessage = error.error.detail;
+          } else {
+            this.errorMessage = 'Something went wrong. Please Try again.';
+          }
+
+          this.cdr.detectChanges();
+        },
+      });
+    } catch (error) {
+      //handel encryption failures
+      this.isSubmitting = false;
+
+      this.newPassword = '';
+      this.confirmPassword = '';
+
+      console.error('Reset password encryption error:', error);
+
+      this.errorMessage = 'Unable to secure your password. Please try again.';
+
+      this.cdr.detectChanges();
+    }
   }
   goToLogin() {
     this.router.navigate(['/login']);

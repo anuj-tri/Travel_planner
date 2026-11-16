@@ -28,6 +28,52 @@
   font-size: 14px;
 }
 
+/* Status filter buttons */
+.trip-filters {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto 28px;
+}
+
+.filter-button {
+  padding: 11px 22px;
+  color: midnightblue;
+  background-color: white;
+  border: 1px solid lightgray;
+  border-radius: 24px;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.filter-button:hover {
+  background-color: aliceblue;
+  border-color: royalblue;
+}
+
+.filter-button.active {
+  color: white;
+  background-color: midnightblue;
+  border-color: midnightblue;
+  box-shadow: 0 3px 8px lightgray;
+}
+
+.filter-button:focus-visible {
+  outline: 3px solid royalblue;
+  outline-offset: 3px;
+}
+
+
 /* Trip list */
 .modify-trips-container {
   display: flex;
@@ -267,4 +313,13 @@
   .modify-button {
     width: 100%;
   }
+  .trip-filters {
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .filter-button {
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+
 }

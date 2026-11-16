@@ -34,7 +34,7 @@
 
           <!-- Starting Destination -->
           <div class="form-group">
-            <label for="starting-destination">STARTING DESTINATION</label>
+            <label for="starting-destination">STARTING DESTINATION (you want to discover)</label>
             <input
               type="text"
               id="starting-destination"
@@ -42,6 +42,7 @@
               [(ngModel)]="startingDestination"
               (ngModelChange)="clearFieldError('startingDestination')"
               placeholder="Enter starting destination"
+              [disabled]="editMode === 'restricted_edit'"
               [attr.aria-invalid]="!!fieldErrors['startingDestination']"
               aria-describedby="starting-destination-error"
             />
@@ -63,6 +64,7 @@
               (click)="swapDestinations()"
               title="Swap starting and ending destinations"
               aria-label="Swap starting and ending destinations"
+              [disabled]="editMode === 'restricted_edit'"
             >
               ⇄
             </button>
@@ -70,7 +72,7 @@
 
           <!-- Ending Destination -->
           <div class="form-group">
-            <label for="ending-destination">ENDING DESTINATION</label>
+            <label for="ending-destination">ENDING DESTINATION (you want to discover)</label>
             <input
               type="text"
               id="ending-destination"
@@ -106,6 +108,7 @@
               [(ngModel)]="startDate"
               (ngModelChange)="clearFieldError('startDate'); clearFieldError('endDate')"
               [min]="minDate"
+              [disabled]="editMode === 'restricted_edit'"
               [attr.aria-invalid]="!!fieldErrors['startDate']"
               aria-describedby="start-date-error"
             />
@@ -128,7 +131,7 @@
               name="endDate"
               [(ngModel)]="endDate"
               (ngModelChange)="clearFieldError('endDate')"
-              [min]="startDate || minDate"
+              [min]="editMode === 'restricted_edit' ? getTomorrowDate() : (startDate || minDate)"
               [attr.aria-invalid]="!!fieldErrors['endDate']"
               aria-describedby="end-date-error"
             />
@@ -152,7 +155,7 @@
               [(ngModel)]="budget"
               (ngModelChange)="clearFieldError('budget')"
               placeholder="Enter your budget"
-              min="2000"
+              min="2500"
               step="1"
               [attr.aria-invalid]="!!fieldErrors['budget']"
               aria-describedby="budget-error"

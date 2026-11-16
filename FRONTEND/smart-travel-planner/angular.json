@@ -59,7 +59,8 @@
               "buildTarget": "smart-travel-planner:build:production"
             },
             "development": {
-              "buildTarget": "smart-travel-planner:build:development"
+              "buildTarget": "smart-travel-planner:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

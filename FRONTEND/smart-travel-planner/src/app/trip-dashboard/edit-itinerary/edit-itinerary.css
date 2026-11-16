@@ -247,7 +247,7 @@
   display: flex;
   justify-content: flex-end;
   width: 100%;
-  margin-bottom: 15px
+  margin-bottom: 15px;
 }
 
 .back-button {
@@ -320,6 +320,7 @@
   margin-top: 30px;
   padding-top: 20px;
   border-top: 2px solid gray;
+  position: relative;
 }
 
 /* Day Progress */
@@ -399,17 +400,116 @@
   cursor: not-allowed;
 }
 
-/* Save Message */
+/* ERROR POPUP */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
 
-.save-message {
   width: 100%;
-  color: darkslategray;
-  font-size: 14px;
-  font-weight: 600;
-  text-align: center;
-  padding: 10px;
+  height: 100%;
+
+  background-color: rgba(0, 0, 0, 0.6);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 99999;
+
+  padding: 20px;
   box-sizing: border-box;
 }
+
+.popup-box {
+  width: 100%;
+  max-width: 450px;
+
+  background-color: white;
+
+  border-radius: 14px;
+
+  padding: 30px;
+
+  box-sizing: border-box;
+
+  text-align: center;
+
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+
+  animation: popupAppear 0.25s ease-out;
+}
+
+.popup-icon {
+  width: 55px;
+  height: 55px;
+
+  margin: 0 auto 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background-color: #fce8e6;
+  color: #b3261e;
+
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.popup-box h2 {
+  color: #222;
+  font-size: 21px;
+
+  margin: 0 0 15px;
+}
+
+.popup-box p {
+  color: #555;
+
+  font-size: 15px;
+  line-height: 1.6;
+
+  margin-bottom: 25px;
+}
+
+.popup-button {
+  min-width: 100px;
+
+  padding: 11px 25px;
+
+  border: none;
+  border-radius: 7px;
+
+  background-color: seagreen;
+  color: white;
+
+  font-size: 15px;
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.popup-button:hover {
+  background-color: darkgreen;
+}
+
+@keyframes popupAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 
 /* Responsive Design */
 
@@ -469,5 +569,42 @@
   .save-button {
     width: 100%;
   }
+   .popup-box {
+    padding: 24px 18px;
+  }
+
+  .popup-box h2 {
+    font-size: 18px;
+  }
+
+  .popup-box p {
+    font-size: 14px;
+  }
 }
 
+
+/* Save Message */
+.navigation .save-message {
+  position: absolute;
+  left: 50%;
+  bottom: -35px;
+  transform: translateX(-50%);
+
+  width: max-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 5px 10px;
+  box-sizing: border-box;
+
+  color: darkslategray;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+
+  visibility: hidden;
+  z-index: 2;
+}
+
+.navigation .save-message.visible {
+  visibility: visible;
+}

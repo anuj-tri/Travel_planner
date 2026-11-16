@@ -29,15 +29,28 @@
       {{ message }}
     </div>
 
+    <!-- Status filters -->
+    <div class="trip-filters" *ngIf="!isLoading && !message">
+      <button
+        type="button"
+        *ngFor="let filter of statusFilters"
+        class="filter-button"
+        [class.active]="selectedStatus === filter.value"
+        (click)="selectedStatus = filter.value">
+
+        {{ filter.label }}
+      </button>
+    </div>
+
     <!-- Trip list -->
     <div
       class="modify-trips-container"
-      *ngIf="!isLoading && !message && savedTrip.length > 0">
+      *ngIf="!isLoading && !message && filteredTrips.length > 0">
 
       <!-- Individual trip card -->
       <div
         class="trip-card"
-        *ngFor="let trip of savedTrip">
+        *ngFor="let trip of filteredTrips">
 
         <!-- Trip information -->
         <div class="trip-information">
@@ -85,9 +98,9 @@
               'status-missed': trip.status === 'missed'
             }">
 
-            <span *ngIf="trip.status === 'upcoming'">◷</span>
-            <span *ngIf="trip.status === 'ongoing'">●</span>
-            <span *ngIf="trip.status === 'missed'">◷</span>
+            <span *ngIf="trip.status === 'upcoming'">⏭</span>
+            <span *ngIf="trip.status === 'ongoing'">◷</span>
+            <span *ngIf="trip.status === 'missed'">✗</span>
 
             {{ trip.status | uppercase }}
           </div>
@@ -112,14 +125,14 @@
       *ngIf="
         !isLoading &&
         !message &&
-        savedTrip.length === 0
+        filteredTrips.length === 0
       ">
 
-      <h2>NO TRIPS TO MODIFY</h2>
+      <h2>NO TRIPS FOUND</h2>
 
       <p>
-        You have no upcoming, ongoing, or missed trips
-        available for modification.
+        No {{ selectedStatus === 'all' ? '' : selectedStatus }}
+        trips are available for modification.
       </p>
     </div>
 

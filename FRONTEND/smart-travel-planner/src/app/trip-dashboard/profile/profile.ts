@@ -1,7 +1,8 @@
+
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-
+import { HttpClient } from '@angular/common/http';
+import { Encryption } from '../../services/encryption';
 
 @Component({
   selector: 'app-profile',
@@ -11,50 +12,42 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 })
 export class Profile implements OnInit {
 
-  // PROFILE DETAILS
   firstName: string = '';
   lastName: string = '';
   email: string = '';
 
-
-
-  // PROFILE EDITING
   isEditing: boolean = false;
   originalFirstName: string = '';
   originalLastName: string = '';
 
-
-  // PROFILE MESSAGES
   successMessage: string = '';
 
   firstNameError: string = '';
   lastNameError: string = '';
 
-  // PROFILE LOADING / SAVING
   isLoading: boolean = true;
   isSaving: boolean = false;
 
-
-  // CHANGE PASSWORD DETAILS
   currentPassword: string = '';
   newPassword: string = '';
   confirmNewPassword: string = '';
 
-
-  // CHANGE PASSWORD VALIDATION
   currentPasswordError: string = '';
   newPasswordError: string = '';
   confirmNewPasswordError: string = '';
 
-  // CHANGE PASSWORD STATE
   isChangingPassword: boolean = false;
   passwordSuccessMessage: string = '';
 
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showConfirmNewPassword = false;
+
   constructor(
     private http: HttpClient,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private encryption: Encryption
   ) {}
-
 
   // COMPONENT INITIALIZATION
   ngOnInit(): void {
@@ -71,45 +64,30 @@ export class Profile implements OnInit {
 
   // GET CURRENT USER
   getCurrentUser(): void {
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      console.log('Access token not found');
-      this.isLoading = false;
-      this.cdr.detectChanges();
-      return;
-    }
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${token}`
-    });
-
-
     this.http.get<any>(
-      'http://127.0.0.1:8000/auth/me',
-      { headers }
+      '/auth/me',
+      { withCredentials: true }
     ).subscribe({
+
       next: (response) => {
+
         console.log('Current user:', response);
 
-        // Set profile details
         this.firstName = response.first_name;
         this.lastName = response.last_name;
         this.email = response.email;
 
-        // Store original values
         this.originalFirstName = response.first_name;
         this.originalLastName = response.last_name;
 
-        // Profile loading complete
         this.isLoading = false;
         this.cdr.detectChanges();
       },
 
       error: (error) => {
-        console.error(
-          'Failed to get current user:',
-          error
-        );
+
+        console.error('Failed to get current user:', error);
+
         this.isLoading = false;
         this.cdr.detectChanges();
       }
@@ -118,12 +96,15 @@ export class Profile implements OnInit {
 
   // EDIT OR SAVE PROFILE
   editOrSave(): void {
+
     // FIRST CLICK → ENABLE EDITING
     if (!this.isEditing) {
+
       this.isEditing = true;
       this.successMessage = '';
       this.firstNameError = '';
       this.lastNameError = '';
+
       return;
     }
 
@@ -131,119 +112,104 @@ export class Profile implements OnInit {
     this.firstNameError = '';
     this.lastNameError = '';
 
-
-    // REMOVE EXTRA SPACES
+    // REMOVE EXTRA SPACES FROM NAMES
     this.firstName = this.firstName.trim();
     this.lastName = this.lastName.trim();
 
     // VALIDATE FIRST NAME
     if (!this.firstName) {
-      this.firstNameError ='Please fill in first name.';
-    } else if (!/^[A-Za-z]+$/.test(this.firstName)){
-      this.firstNameError = 'First name can contain alphabets only'
+
+      this.firstNameError = 'Please fill in first name.';
+
+    } else if (!/^[A-Za-z]+$/.test(this.firstName)) {
+
+      this.firstNameError = 'First name can contain alphabets only';
     }
 
     // VALIDATE LAST NAME
     if (!this.lastName) {
-      this.lastNameError ='Please fill in last name.';
-    } else if (!/^[A-Za-z]+$/.test(this.lastName)){
-      this.lastNameError = 'Last name can contain alphabets only'
+
+      this.lastNameError = 'Please fill in last name.';
+
+    } else if (!/^[A-Za-z]+$/.test(this.lastName)) {
+
+      this.lastNameError = 'Last name can contain alphabets only';
     }
 
     // STOP IF VALIDATION FAILED
-    if (
-      this.firstNameError ||this.lastNameError
-    ) {
+    if (this.firstNameError || this.lastNameError) {
       return;
     }
 
     // CHECK WHETHER ANYTHING CHANGED
     if (!this.hasChanges) {
+
       this.isEditing = false;
       return;
     }
-
-    // GET ACCESS TOKEN
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      console.log('Access token not found');
-      return;
-    }
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${token}`
-    });
-
 
     // DATA SENT TO BACKEND
     const updatedProfile = {
       first_name: this.firstName,
       last_name: this.lastName
-
     };
-
 
     // PREVENT MULTIPLE SAVE CLICKS
     this.isSaving = true;
 
-
     // UPDATE PROFILE API
     this.http.patch<any>(
-      'http://127.0.0.1:8000/auth/me',
+      '/auth/me',
       updatedProfile,
-      { headers }
+      { withCredentials: true }
     ).subscribe({
 
       next: (response) => {
 
-        console.log(
-          'Profile updated successfully:',
-          response
-        );
+        console.log('Profile updated successfully:', response);
 
+        // UPDATE DISPLAYED VALUES
+        this.firstName = response.first_name;
+        this.lastName = response.last_name;
 
-        // Update displayed values
-        this.firstName =response.first_name;
-        this.lastName =response.last_name;
+        // UPDATE ORIGINAL VALUES
+        this.originalFirstName = response.first_name;
+        this.originalLastName = response.last_name;
 
-        // Update original values
-        this.originalFirstName =response.first_name;
-        this.originalLastName =response.last_name;
-
-
-        // Exit editing mode
+        // EXIT EDITING MODE
         this.isEditing = false;
 
-
-        // Stop saving state
+        // STOP SAVING STATE
         this.isSaving = false;
 
+        // SHOW SUCCESS MESSAGE
+        this.successMessage = 'Name changed successfully!';
 
-        // Show success message
-        this.successMessage =
-          'Name changed successfully!';
         this.cdr.detectChanges();
 
-
-        // Refresh page after 2 second
-        setTimeout(() => {window.location.reload();
+        // REFRESH PAGE AFTER 2 SECONDS
+        setTimeout(() => {
+          window.location.reload();
         }, 2000);
-
       },
 
       error: (error) => {
+
         console.error('Failed to update profile:', error);
+
         this.isSaving = false;
         this.cdr.detectChanges();
-
       }
-
     });
-
   }
 
+  // CHANGE PASSWORD WITH RSA ENCRYPTION
+  async changePassword(): Promise<void> {
 
-  // CHANGE PASSWORD
-  changePassword(): void {
+    // PREVENT MULTIPLE SUBMISSIONS
+    if (this.isChangingPassword) {
+      return;
+    }
 
     // CLEAR OLD ERRORS
     this.currentPasswordError = '';
@@ -251,32 +217,36 @@ export class Profile implements OnInit {
     this.confirmNewPasswordError = '';
     this.passwordSuccessMessage = '';
 
-
-    // REMOVE EXTRA SPACES
-    this.currentPassword = this.currentPassword.trim();
-    this.newPassword = this.newPassword.trim();
-    this.confirmNewPassword =this.confirmNewPassword.trim();
+    // DO NOT TRIM PASSWORDS.
+    // SPACES MAY BE VALID PASSWORD CHARACTERS.
 
     // CURRENT PASSWORD VALIDATION
     if (!this.currentPassword) {
-      this.currentPasswordError ='Please enter your current password.';
+
+      this.currentPasswordError = 'Please enter your current password.';
     }
 
     // NEW PASSWORD VALIDATION
     if (!this.newPassword) {
-      this.newPasswordError ='Please enter a new password.';
+
+      this.newPasswordError = 'Please enter a new password.';
     }
 
     // CONFIRM PASSWORD VALIDATION
     if (!this.confirmNewPassword) {
+
       this.confirmNewPasswordError = 'Please confirm your new password.';
     }
 
-    //checking the new password is dirrent from current password.
+    // NEW PASSWORD MUST BE DIFFERENT FROM CURRENT PASSWORD
     if (
-      this.currentPassword && this.newPassword && this.currentPassword === this.newPassword
-    ){
-      this.newPasswordError = 'New password must be diffrent from your current password.';
+      this.currentPassword &&
+      this.newPassword &&
+      this.currentPassword === this.newPassword
+    ) {
+
+      this.newPasswordError =
+        'New password must be different from your current password.';
     }
 
     // CHECK PASSWORD MATCH
@@ -286,130 +256,133 @@ export class Profile implements OnInit {
       this.newPassword !== this.confirmNewPassword
     ) {
 
-      this.confirmNewPasswordError ='New password and confirm password do not match.';
+      this.confirmNewPasswordError =
+        'New password and confirm password do not match.';
     }
 
     // STOP IF VALIDATION FAILED
     if (
-      this.currentPasswordError || this.newPasswordError || this.confirmNewPasswordError
+      this.currentPasswordError ||
+      this.newPasswordError ||
+      this.confirmNewPasswordError
     ) {
       return;
     }
 
-    //getting the access token
-
-    const token = localStorage.getItem('access_token')
-
-    if (!token) {
-      console.log('Access token is not found');
-      return;
-    }
-
-    //Authorization header
-
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${token}`
-    });
-
-    //request body
-
-    const changePasswordData = {
-      current_password: this.currentPassword,
-
-      new_password: this.newPassword,
-
-      confirm_new_password: this.confirmNewPassword
-    };
-
-    //prevent multiple clicks
+    // START LOADING STATE
     this.isChangingPassword = true;
 
-    //now we put api
-    this.http.patch<any>('http://127.0.0.1:8000/auth/me/change-password',changePasswordData,
+    try {
 
-    { headers }
+      // ENCRYPT CURRENT PASSWORD
+      const encryptedCurrentPassword =
+        await this.encryption.encryptPassword(this.currentPassword);
 
-  ).subscribe({
+      // ENCRYPT NEW PASSWORD
+      const encryptedNewPassword =
+        await this.encryption.encryptPassword(this.newPassword);
 
-    // =======================================
-    // SUCCESS
-    // =======================================
+      // ENCRYPT CONFIRM PASSWORD
+      const encryptedConfirmPassword =
+        await this.encryption.encryptPassword(this.confirmNewPassword);
 
-    next: (response) => {
-
-      console.log(
-        'Password changed successfully:',
-        response
-      );
-
-      // Stop loading state
-      this.isChangingPassword = false;
-
-      // Show success message
-      this.passwordSuccessMessage ='Password changed successfully.';
-
-
-      // Clear password fields
+      // CLEAR PLAINTEXT PASSWORDS FROM COMPONENT STATE
       this.currentPassword = '';
       this.newPassword = '';
       this.confirmNewPassword = '';
 
-      this.cdr.detectChanges();
+      // REQUEST BODY CONTAINS ONLY ENCRYPTED PASSWORDS
+      const changePasswordData = {
 
-      setTimeout(() => {
-        window.location.reload();
-      },1900);
+        current_password: encryptedCurrentPassword,
 
-    },
+        new_password: encryptedNewPassword,
 
-    // ERROR
-    error: (error) => {
-      console.error(
-        'Failed to change password:',
-        error
-      );
+        confirm_new_password: encryptedConfirmPassword
+      };
 
-      // Stop loading state
-      this.isChangingPassword = false;
+      // CALL CHANGE PASSWORD API
+      this.http.patch<any>(
+        '/auth/me/change-password',
+        changePasswordData,
+        { withCredentials: true }
+      ).subscribe({
 
-      //stop chaging password state.
-      const errorMessage = error.error?.detail;
+        // SUCCESS
+        next: (response) => {
 
-      //wrong current password
+          console.log('Password changed successfully:', response);
 
-      if (
-        errorMessage ==="Current password is incorrect" || errorMessage ==='Current password is incorrect.'
-      ){
-        this.currentPasswordError = 'Current password is incorrect.';
+          this.isChangingPassword = false;
 
-        this.cdr.detectChanges();
-        return;
-      }
-
-
-      // New password confirmation mismatch
-      if (
-        errorMessage ===
-        'New password and confirm password do not match.'
-      ) {
-
-        this.confirmNewPasswordError =
-          'New password and confirm password do not match.';
+          this.passwordSuccessMessage =
+            'Password changed successfully.';
 
           this.cdr.detectChanges();
 
-        return;
+          setTimeout(() => {
+            window.location.reload();
+          }, 1900);
+        },
 
-      }
+        // API ERROR
+        error: (error) => {
 
-      // Generic error
-      console.error(
-        'Unexpected password change error:',
-        errorMessage
-      );
+          console.error('Failed to change password:', error);
+
+          this.isChangingPassword = false;
+
+          const errorMessage = error.error?.detail;
+
+          // WRONG CURRENT PASSWORD
+          if (
+            errorMessage === 'Current password is incorrect' ||
+            errorMessage === 'Current password is incorrect.'
+          ) {
+
+            this.currentPasswordError =
+              'Current password is incorrect.';
+          }
+
+          // NEW PASSWORD CONFIRMATION MISMATCH
+          else if (
+            errorMessage ===
+            'New password and confirm password do not match.'
+          ) {
+
+            this.confirmNewPasswordError =
+              'New password and confirm password do not match.';
+          }
+
+          // GENERIC ERROR
+          else {
+
+            console.error(
+              'Unexpected password change error:',
+              errorMessage
+            );
+          }
+
+          this.cdr.detectChanges();
+        }
+      });
+
+    } catch (error) {
+
+      // ENCRYPTION ERROR
+      console.error('Password encryption failed:', error);
+
+      this.isChangingPassword = false;
+
+      // CLEAR REMAINING PLAINTEXT PASSWORDS
+      this.currentPassword = '';
+      this.newPassword = '';
+      this.confirmNewPassword = '';
+
+      this.currentPasswordError =
+        'Unable to secure your password. Please try again.';
 
       this.cdr.detectChanges();
     }
-  });
-}
+  }
 }

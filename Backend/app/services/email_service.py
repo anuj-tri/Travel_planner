@@ -57,4 +57,4 @@ Smart Travel Planner
         server.starttls(context=context)
         server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD.replace(" ", ""))
         server.send_message(message)
-    return {"messsage": "Password reset email sent successfully"}
+    return {"message": "Password reset email sent successfully"}

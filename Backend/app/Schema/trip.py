@@ -1,6 +1,6 @@
 from datetime import date
 from pydantic import BaseModel, Field
-from typing import Any
+from typing import Any, Literal
 
 
 # trip Details
@@ -51,6 +51,7 @@ class DeleteTripResponse(BaseModel):
     trip_id: int
     message: str
 
+
 class EditTripDetailsResponse(BaseModel):
     trip_id: int
     starting_destination: str
@@ -60,7 +61,9 @@ class EditTripDetailsResponse(BaseModel):
     no_of_travellers: int
     budget: float
     status: str
+    edit_mode: Literal["full_edit", "restricted_edit"]
     preference_ids: list[int]
+
 
 class PreviewModifiedTripRequest(BaseModel):
     starting_destination: str = Field(min_length=1)

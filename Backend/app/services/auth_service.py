@@ -2,6 +2,8 @@ from app.services.email_service import send_reset_password_email
 
 from fastapi import HTTPException, status
 
+from app.services.encryption_service import decrypt_password, InvalidCiphertextError
+
 from app.Schema.auth import (
     SignupRequest,
     LoginRequest,
@@ -9,8 +11,6 @@ from app.Schema.auth import (
     ResetPasswordRequest,
     UpdateProfileRequest,
     ChangePasswordRequest,
-    RefreshTokenRequest,
-    LogoutRequest,
     ValidateResetTokenRequest,
 )
 
@@ -30,6 +30,9 @@ import hashlib
 import secrets
 
 from app.redis_client import redis_client
+
+import logging
+logger = logging.getLogger(__name__)
 
 password_hash = PasswordHash.recommended()  # here i am creating password hashing object
 
@@ -61,6 +64,16 @@ def verify_password(password: str, hashed_password: str) -> bool:
     peppered_password = pepper_password(password)
 
     return password_hash.verify(peppered_password, hashed_password)
+
+
+def decrypt_request_password(encrypted_password: str) -> str:
+    try:
+        return decrypt_password(encrypted_password)
+
+    except InvalidCiphertextError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid encrypted password"
+        )
 
 
 # here i am creating secret key for jwt token
@@ -126,12 +139,18 @@ def signup_service(request: SignupRequest, db: Session):
             detail="User with this email already exists",
         )
 
-    if request.password != request.confirm_password:
+    # decrypt the password received from angular
+    password = decrypt_request_password(request.password)
+    confirm_password = decrypt_request_password(request.confirm_password)
+
+    # comparing the decrypt passwords
+    if password != confirm_password:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords do not match"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Password do not match"
         )
 
-    hashed_password = hash_password(request.password)
+    # hash the decrypted password usiung existing Argon2id logic
+    hashed_password = hash_password(password)
 
     new_user = Users(
         first_name=request.first_name,
@@ -155,10 +174,13 @@ def login_service(request: LoginRequest, db: Session):
     user = db.query(Users).filter(Users.email == request.email).first()
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User Not found"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
 
-    if not verify_password(request.password, user.password_hash):
+    password = decrypt_request_password(request.password)
+
+    # verify the decrypt password against the existing argon2id hash
+    if not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
         )
@@ -179,26 +201,29 @@ def login_service(request: LoginRequest, db: Session):
 
         db.add(token_record)
         db.commit()
+
     except Exception:
         db.rollback()
         raise
 
+    # return tokens internally so the route can set HttpOnly cookies.
+    # the route must remove these value from the HTTP response body.
     return {
         "message": "Login successful",
-        "email": request.email,
+        "email": user.email,
         "access_token": access_token,
         "refresh_token": refresh_token,
     }
 
 
 # Refresh service
-def refresh_token_service(request: RefreshTokenRequest, db: Session):
+def refresh_token_service(refresh_token: str, db: Session):
 
     now = datetime.now(timezone.utc)
 
     try:
         payload = jwt.decode(
-            request.refresh_token,
+            refresh_token,
             REFRESH_SECRET_KEY,
             algorithms=[ALGORITHM],
         )
@@ -215,7 +240,7 @@ def refresh_token_service(request: RefreshTokenRequest, db: Session):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
         )
-    token_hash = hash_refresh_token(request.refresh_token)
+    token_hash = hash_refresh_token(refresh_token)
 
     token_record = (
         db.query(RefreshToken)
@@ -233,8 +258,9 @@ def refresh_token_service(request: RefreshTokenRequest, db: Session):
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account is unavailable",
+            detail="Refresh token is invalid, expired, or revoked",
         )
+
     new_access_token = create_access_token(user_id)
     new_refresh_token = create_refresh_token(user_id)
 
@@ -253,6 +279,7 @@ def refresh_token_service(request: RefreshTokenRequest, db: Session):
     except Exception:
         db.rollback()
         raise
+
     return {
         "access_token": new_access_token,
         "refresh_token": new_refresh_token,
@@ -261,11 +288,9 @@ def refresh_token_service(request: RefreshTokenRequest, db: Session):
 
 
 # logout service
+def logout_service(refresh_token: str, db: Session):
 
-
-def logout_service(request: LogoutRequest, db: Session):
-
-    token_hash = hash_refresh_token(request.refresh_token)
+    token_hash = hash_refresh_token(refresh_token)
 
     token_record = (
         db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
@@ -279,10 +304,10 @@ def logout_service(request: LogoutRequest, db: Session):
         except Exception:
             db.rollback()
             raise
-    return {"message": "Logout successfully"}
+    return {"message": "Logout successful"}
 
 
-# FORGOIT PASSWORD
+# FORGOT PASSWORD
 def forgot_password_service(request: ForgotPasswordRequest, db: Session):
 
     user = db.query(Users).filter(Users.email == request.email).first()
@@ -293,13 +318,16 @@ def forgot_password_service(request: ForgotPasswordRequest, db: Session):
 
     reset_token = create_reset_token(user.user_id)
 
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:4200")
+
     password_reset_link = (
-        f"http://localhost:4200/reset-password" f"?token={reset_token}"
+        f"{FRONTEND_URL.rstrip('/')}/reset-password?token={reset_token}"
     )
 
     try:
         send_reset_password_email(user.email, password_reset_link)
-    except Exception as e:
+
+    except Exception:
         # inavildat eteh token if sending is failed
 
         token_hash = hashlib.sha256(reset_token.encode("utf-8")).hexdigest()
@@ -309,7 +337,7 @@ def forgot_password_service(request: ForgotPasswordRequest, db: Session):
             pipe.delete(f"reset:user:{user.user_id}")
             pipe.execute()
 
-        print("Email sending failed:", e)
+        logger.exception("Email sending failed")
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -360,7 +388,13 @@ def validate_reset_token_service(request: ValidateResetTokenRequest, db: Session
 # reset password
 def reset_password_service(request: ResetPasswordRequest, db: Session):
 
-    if request.new_password != request.confirm_password:
+    # decrypt both password received from angular
+
+    new_password = decrypt_request_password(request.new_password)
+    confirm_password = decrypt_request_password(request.confirm_password)
+
+    # compare the decrypt passwords
+    if new_password != confirm_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords do not match"
         )
@@ -370,7 +404,7 @@ def reset_password_service(request: ResetPasswordRequest, db: Session):
     if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            details="Invalid, expired, or already used reset link",
+            detail="Invalid, expired, or already used reset link",
         )
 
     token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
@@ -433,7 +467,7 @@ def reset_password_service(request: ResetPasswordRequest, db: Session):
             pipe.delete(user_key)
             pipe.execute()
 
-        user.password_hash = hash_password(request.new_password)
+        user.password_hash = hash_password(new_password)
         db.commit()
 
         return {"message": "Password reset successful"}
@@ -487,38 +521,43 @@ def update_profile_service(request: UpdateProfileRequest, current_user, db: Sess
     }
 
 
-# chnaging the password of current user
+# Changing the password of the current user
 def change_password_service(request: ChangePasswordRequest, current_user, db: Session):
+    # STEP 1: Decrypt all three encrypted password fields
+    current_password = decrypt_request_password(request.current_password)
 
-    # verify the current password
-    if not verify_password(request.current_password, current_user.password_hash):
+    new_password = decrypt_request_password(request.new_password)
+
+    confirm_new_password = decrypt_request_password(request.confirm_new_password)
+
+    # STEP 2: Verify the current password using Argon2
+    if not verify_password(current_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect",
         )
 
-    # check the new password is different from current password
-    if verify_password(request.new_password, current_user.password_hash):
+    # STEP 3: Check that the new password differs from current password
+    if verify_password(new_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="New password must be different from your current password",
         )
 
-    # check the new password and confirm password match
-    if request.new_password != request.confirm_new_password:
+    # STEP 4: Check that new password and confirmation match
+    if new_password != confirm_new_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="New password and confirm password do not match.",
         )
 
-    # hash the new password
-    new_hashed_password = hash_password(request.new_password)
+    # STEP 5: Hash the new password using Argon2
+    new_hashed_password = hash_password(new_password)
 
-    # updating it in the db
+    # STEP 6: Update the password in the database
     current_user.password_hash = new_hashed_password
 
-    db.commit()  # save the new password to db
-
-    db.refresh(current_user)  # refrsh the db with latest database values..
+    db.commit()
+    db.refresh(current_user)
 
     return {"message": "Password changed successfully"}

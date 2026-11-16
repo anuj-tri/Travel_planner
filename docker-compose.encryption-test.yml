@@ -1,0 +1,33 @@
+services:
+  backend:
+    image: smart-travel-planner-backend:encryption-v2
+    container_name: smart-travel-backend-encryption-test
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://travel_user:${DOCKER_DB_PASSWORD}@db:5432/travel_planner
+      REDIS_URL: redis://redis:6379/0
+      RSA_PRIVATE_KEY_PATH: /run/secrets/rsa_private_key.pem
+      RSA_PUBLIC_KEY_PATH: /run/secrets/rsa_public_key.pem
+    volumes:
+      - ${LOCALAPPDATA}/SmartTravelPlanner/secrets:/run/secrets:ro
+    ports:
+      - "127.0.0.1:8001:8000"
+    networks:
+      - travel_planner_default
+
+  frontend:
+    image: smart-travel-planner-frontend:encryption-v2
+    container_name: smart-travel-frontend-encryption-test
+    restart: unless-stopped
+    ports:
+      - "4201:80"
+    depends_on:
+      - backend
+    networks:
+      - travel_planner_default
+
+networks:
+  travel_planner_default:
+    external: true

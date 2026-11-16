@@ -15,6 +15,7 @@ export class ForgotPassword {
 
   message: string = '';
   errorMessage: string = '';
+  isSubmitting: boolean = false;
 
   constructor(
     private http: HttpClient,
@@ -23,6 +24,11 @@ export class ForgotPassword {
   ) {}
 
   sendResetLink() {
+
+    //prevent duplicate submission
+    if (this.isSubmitting) {
+      return;
+    }
     this.message = ''; // Clear the previous messages
     this.errorMessage = '';
 
@@ -31,6 +37,8 @@ export class ForgotPassword {
       this.errorMessage = 'Please enter your email address.';
       return;
     }
+    this.isSubmitting = true;
+
     const forgotPasswordData = {
       email: this.email,
     };
@@ -38,7 +46,7 @@ export class ForgotPassword {
     this.http
       .post(
         //Send this request to fats api
-        'http://localhost:8000/auth/forgot-password',
+        '/auth/forgot-password',
         forgotPasswordData,
       )
       .subscribe({
@@ -46,6 +54,7 @@ export class ForgotPassword {
           console.log('Reset link request successful:', response);
 
           this.message = 'Reset link has been sent to your email.';
+          this.isSubmitting = false;
           this.cdr.detectChanges();
         },
 
@@ -53,12 +62,14 @@ export class ForgotPassword {
           console.error('Forgot password failed:', error);
           console.log('Status:', error.status);
           console.log('Error body:', error.error);
+
           if(error.status === 404){
             this.errorMessage = 'Please enter a registered email address.';
           } else {
             this.errorMessage = 'Unable to send the reset link. Please try again.';
           }
           this.message =''
+          this.isSubmitting = false;
           this.cdr.detectChanges();
         },
       });

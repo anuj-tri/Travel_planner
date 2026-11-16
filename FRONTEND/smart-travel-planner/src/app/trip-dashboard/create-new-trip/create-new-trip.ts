@@ -1,10 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { Router } from '@angular/router';
-import { Itinerary } from '../itinerary/itinerary';
 
 @Component({
   selector: 'app-create-new-trip',
@@ -12,7 +11,7 @@ import { Itinerary } from '../itinerary/itinerary';
   templateUrl: './create-new-trip.html',
   styleUrl: './create-new-trip.css',
 })
-export class CreateNewTrip {
+export class CreateNewTrip implements OnDestroy{
   //trip details
 
   startingDestination: string = '';
@@ -98,6 +97,10 @@ export class CreateNewTrip {
     private cdr: ChangeDetectorRef,
   ) {
     this.setMinimumDate();
+  }
+
+  ngOnDestroy(): void {
+    this.stopGenerationProgress();
   }
 
   //set tommorow Date as a minimum date
@@ -222,15 +225,12 @@ export class CreateNewTrip {
       budget: this.budget,
       preference_ids: preferenceIds,
     };
-    const token = localStorage.getItem('access_token');
-    const headers = {
-      Authorization: `Bearer ${token}`,
-    };
+
 
     console.log('Trip Data:', tripData);
-    console.log('Access Token exists:', !!token);
 
-    this.http.post('http://127.0.0.1:8000/trips', tripData, { headers }).subscribe({
+
+    this.http.post('/trips', tripData, { withCredentials: true }).subscribe({
       next: (response: any) => {
         //Create trip api success.
         console.log('Create Trip Response:', response);
@@ -241,7 +241,7 @@ export class CreateNewTrip {
 
         //Gernerate Itinerary API
         this.http
-          .post(`http://127.0.0.1:8000/trips/${tripId}/generate-itinerary`, {}, { headers })
+          .post(`/trips/${tripId}/generate-itinerary`, {}, { withCredentials: true })
           .subscribe({
             //Generate itinerary success
             next: (intineraryResponse: any) => {
@@ -269,9 +269,20 @@ export class CreateNewTrip {
 
               this.stopGenerationProgress();
               this.isGenerating = false;
-              this.generationProgress - 0;
-              this.errorMessage = 'Unable to generate your itinerary. Please try again.';
+              this.generationProgress = 0;
+              this.errorMessage = '';
+              if (error.status === 429 || error.status === 503) {
+                this.errorMessage =
+                  'Our AI service is experiencing high demand. Please try again in a minute.';
+              } else if (error.status === 502 || error.status === 504) {
+                this.errorMessage =
+                  'The AI service is taking too long to respond. Please try again in a minute.';
+              } else {
+                this.errorMessage =
+                  'Unable to generate your itinerary. Please try again.';
+              }
               this.generateMessage = '';
+              this.cdr.detectChanges();
             },
           });
       },
@@ -289,6 +300,7 @@ export class CreateNewTrip {
         this.generationProgress =0 ;
         this.errorMessage = 'Unable to create trip. Please try again.';
         this.generateMessage = '';
+        this.cdr.detectChanges();
       },
     });
 
@@ -306,10 +318,10 @@ export class CreateNewTrip {
     this.generationProgress = 5;
     this.elapsedSeconds =0 ;
     this.progressLabel ='Creating your Trip...';
-    this.timeRemainingMessage = 'Estimated time remaining : about 15 seconds';
+    this.timeRemainingMessage = 'Estimated time remaining : about 45 seconds';
 
     this.progressInterval = setInterval(() => {
-      this.elapsedSeconds++;
+      this.elapsedSeconds += 0.5;
 
 
       if(this.generationProgress < 90) {
@@ -330,16 +342,16 @@ export class CreateNewTrip {
 
       const remaining = Math.max(
         1,
-        this.estimatedDuration - this.elapsedSeconds
+        Math.ceil(this.estimatedDuration - this.elapsedSeconds)
       );
 
       this.timeRemainingMessage =
         this.elapsedSeconds < this.estimatedDuration
-          ? 'Estimated time remainig: about ${remaining} seconds'
-          : 'Taking longer than expected> Please keep this page open...';
+          ? `Estimated time remaining: about ${remaining} seconds`
+          : 'Taking longer than expected. Please keep this page open...';
 
       this.cdr.markForCheck();
-    }, 50);
+    }, 500);
 
   }
 

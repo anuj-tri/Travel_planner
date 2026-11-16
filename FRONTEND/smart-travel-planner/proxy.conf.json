@@ -1,0 +1,17 @@
+{
+  "/auth": {
+    "target": "http://localhost:8001",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/trips": {
+    "target": "http://localhost:8001",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/encryption" :{
+    "target": "http://localhost:8001",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

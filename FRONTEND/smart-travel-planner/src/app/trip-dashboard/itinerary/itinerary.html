@@ -39,7 +39,6 @@
     <div class="day-selection" *ngIf="itineraryData?.days?.length">
       <div class="day-heading">
         <h2>Day {{ itineraryData.days[currentDayIndex].day_number }}</h2>
-
         <p>Choose your preferred itineraray for this day</p>
       </div>
 
@@ -108,6 +107,15 @@
       <div class="navigation">
         <!--day progress -->
 
+        <button
+          type="button"
+          class="next-button"
+          *ngIf="currentDayIndex > 0"
+          (click) ="previousDay()"
+        >
+          ← PREVIOUS DAY
+        </button>
+
         <div class="day-progress">
           <span
             *ngFor="let day of itineraryData.days; let i = index"
@@ -128,19 +136,60 @@
           NEXT DAY →
         </button>
 
-        <div *ngIf="message" class="save-message">{{ message }}</div>
+        <div class ="save-message-container" *ngIf="message">
+          <div class="save-message" role ="alert">
+            {{ message }}
+          </div>
+        </div>
 
         <!--save button -->
 
         <button
+          type="button"
           class="save-button"
           *ngIf="currentDayIndex === itineraryData.days.length - 1"
           (click)="saveItinerary()"
-          [disabled]="isSaving"
+          [disabled]="isSaving || showPopup"
         >
           {{ isSaving ? 'SAVING...' : 'SAVE ITINERARY' }}
         </button>
       </div>
+    </div>
+    <div
+      class="popup-overlay"
+      *ngIf="showPopup"
+    >
+
+      <div
+        class="popup-box"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="popup-title"
+        aria-describedby="popup-message"
+      >
+
+        <div class="popup-icon">
+          !
+        </div>
+
+        <h2 id="popup-title">
+          {{ popupTitle }}
+        </h2>
+
+        <p id="popup-message">
+          {{ popupMessage }}
+        </p>
+
+        <button
+          type="button"
+          class="popup-button"
+          (click)="closePopup()"
+        >
+          OK
+        </button>
+
+      </div>
+
     </div>
   </body>
 </html>
