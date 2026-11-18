@@ -142,6 +142,7 @@ jobs:
   deploy:
     name: Deploy to Production EC2
     runs-on: [self-hosted, Linux, X64]
+    environment: production
 
     needs: build-and-push
 
