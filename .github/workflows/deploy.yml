@@ -1,0 +1,374 @@
+
+name: Smart Travel Planner CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smart-travel-planner-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-southeast-2
+  AWS_ACCOUNT_ID: "450993990655"
+  ECR_REGISTRY: 450993990655.dkr.ecr.ap-southeast-2.amazonaws.com
+  BACKEND_REPOSITORY: smart-travel-planner-backend
+  FRONTEND_REPOSITORY: smart-travel-planner-frontend
+
+jobs:
+
+  # ==========================================
+  # JOB 1: BUILD AND PUSH IMAGES TO ECR
+  # Runs on GitHub-hosted infrastructure
+  # ==========================================
+
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+
+    # Manual workflow runs must also target main.
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+
+      # 1. Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+
+      # 3. Verify AWS identity
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      # 4. Login to Amazon ECR
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" |
+          docker login \
+            --username AWS \
+            --password-stdin "$ECR_REGISTRY"
+
+      # 5. Generate Angular environment configuration
+      - name: Generate frontend environment
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.FRONTEND_GOOGLE_MAPS_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "$GOOGLE_MAPS_API_KEY" ]; then
+            echo "Frontend Google Maps API key is missing."
+            exit 1
+          fi
+
+          mkdir -p FRONTEND/smart-travel-planner/src/environments
+
+          node <<'NODE'
+          const fs = require('fs');
+
+          const key = process.env.GOOGLE_MAPS_API_KEY;
+
+          const content = `export const environment = {
+            googleMapsApiKey: ${JSON.stringify(key)}
+          };
+          `;
+
+          fs.writeFileSync(
+            'FRONTEND/smart-travel-planner/src/environments/environment.ts',
+            content
+          );
+          NODE
+
+      # 6. Set unique image tag
+      - name: Set Docker image tags
+        run: |
+          echo "IMAGE_TAG=${GITHUB_SHA}" >> "$GITHUB_ENV"
+
+      # 7. Build backend image
+      - name: Build backend image
+        run: |
+          docker build \
+            -t "$ECR_REGISTRY/$BACKEND_REPOSITORY:$GITHUB_SHA" \
+            ./Backend
+
+      # 8. Build frontend image
+      - name: Build frontend image
+        run: |
+          docker build \
+            -t "$ECR_REGISTRY/$FRONTEND_REPOSITORY:$GITHUB_SHA" \
+            ./FRONTEND/smart-travel-planner
+
+      # 9. Push backend image
+      - name: Push backend image to ECR
+        run: |
+          docker push \
+            "$ECR_REGISTRY/$BACKEND_REPOSITORY:$GITHUB_SHA"
+
+      # 10. Push frontend image
+      - name: Push frontend image to ECR
+        run: |
+          docker push \
+            "$ECR_REGISTRY/$FRONTEND_REPOSITORY:$GITHUB_SHA"
+
+      # 11. Build summary
+      - name: Display published images
+        run: |
+          echo "Backend image:"
+          echo "$ECR_REGISTRY/$BACKEND_REPOSITORY:$GITHUB_SHA"
+
+          echo "Frontend image:"
+          echo "$ECR_REGISTRY/$FRONTEND_REPOSITORY:$GITHUB_SHA"
+
+
+  # ==========================================
+  # JOB 2: DEPLOY IMAGES ON PRODUCTION EC2
+  # Runs on your existing self-hosted runner
+  # ==========================================
+
+  deploy:
+    name: Deploy to Production EC2
+    runs-on: [self-hosted, Linux, X64]
+    environment: production
+
+    needs: build-and-push
+
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+
+      # 1. Verify EC2 identity
+      - name: Verify EC2 AWS identity
+        run: |
+          aws sts get-caller-identity
+
+      # 2. Authenticate EC2 with ECR
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ap-southeast-2 |
+          docker login \
+            --username AWS \
+            --password-stdin \
+            450993990655.dkr.ecr.ap-southeast-2.amazonaws.com
+
+      # 3. Deploy application
+      - name: Deploy production containers
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+
+          cd /home/ec2-user
+
+          BASE_COMPOSE="/home/ec2-user/docker-compose.prod.yml"
+          OVERRIDE_COMPOSE="${RUNNER_TEMP}/compose.cicd.yml"
+          ROLLBACK_COMPOSE="${RUNNER_TEMP}/compose.rollback.yml"
+
+          BACKEND_IMAGE="450993990655.dkr.ecr.ap-southeast-2.amazonaws.com/smart-travel-planner-backend:${IMAGE_TAG}"
+
+          FRONTEND_IMAGE="450993990655.dkr.ecr.ap-southeast-2.amazonaws.com/smart-travel-planner-frontend:${IMAGE_TAG}"
+
+          # --------------------------------------
+          # A. Validate production configuration
+          # --------------------------------------
+
+          test -f "$BASE_COMPOSE"
+          test -f "/home/ec2-user/.env.production"
+          test -f "/home/ec2-user/smart-travel-planner/secrets/rsa_private_key.pem"
+          test -f "/home/ec2-user/smart-travel-planner/secrets/rsa_public_key.pem"
+
+          docker inspect smart-travel-backend >/dev/null
+          docker inspect smart-travel-frontend >/dev/null
+
+          echo "Production configuration verified."
+
+          # --------------------------------------
+          # B. Capture previous production images
+          # --------------------------------------
+
+          PREVIOUS_BACKEND=$(docker inspect \
+            --format '{{.Config.Image}}' smart-travel-backend)
+
+          PREVIOUS_FRONTEND=$(docker inspect \
+            --format '{{.Config.Image}}' smart-travel-frontend)
+
+          echo "Previous backend: $PREVIOUS_BACKEND"
+          echo "Previous frontend: $PREVIOUS_FRONTEND"
+
+          # --------------------------------------
+          # C. Create new deployment override
+          # --------------------------------------
+
+          cat > "$OVERRIDE_COMPOSE" <<YAML
+          services:
+            backend:
+              image: ${BACKEND_IMAGE}
+            frontend:
+              image: ${FRONTEND_IMAGE}
+          YAML
+
+          # --------------------------------------
+          # D. Pull new images
+          # --------------------------------------
+
+          docker compose \
+            -f "$BASE_COMPOSE" \
+            -f "$OVERRIDE_COMPOSE" \
+            pull backend frontend
+
+          # --------------------------------------
+          # E. Define diagnostic function
+          # --------------------------------------
+
+          collect_diagnostics() {
+            echo "========== CONTAINER STATUS =========="
+
+            docker ps -a
+
+            echo "========== BACKEND LOGS =========="
+
+            docker logs --tail 150 smart-travel-backend || true
+
+            echo "========== FRONTEND LOGS =========="
+
+            docker logs --tail 150 smart-travel-frontend || true
+
+            echo "========== BACKEND INSPECTION =========="
+
+            docker inspect smart-travel-backend \
+              --format='Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Error={{.State.Error}}' \
+              || true
+
+            echo "========== FRONTEND INSPECTION =========="
+
+            docker inspect smart-travel-frontend \
+              --format='Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Error={{.State.Error}}' \
+              || true
+          }
+
+          # --------------------------------------
+          # F. Define health-check function
+          # --------------------------------------
+
+          wait_for_health() {
+            echo "Waiting for production application..."
+
+            for i in $(seq 1 24); do
+
+              BACKEND_OK=false
+              FRONTEND_OK=false
+
+              if docker exec smart-travel-backend \
+                python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs', timeout=4)" \
+                >/dev/null 2>&1; then
+                BACKEND_OK=true
+              fi
+
+              if curl -fsS --max-time 4 \
+                http://127.0.0.1/ >/dev/null 2>&1; then
+                FRONTEND_OK=true
+              fi
+
+              if [ "$BACKEND_OK" = true ] &&
+                 [ "$FRONTEND_OK" = true ]; then
+
+                echo "Backend and frontend are responding."
+                return 0
+              fi
+
+              echo "Health check attempt $i/24 failed."
+              sleep 5
+
+            done
+
+            echo "Application health check failed."
+            return 1
+          }
+
+          # --------------------------------------
+          # G. Deploy new containers
+          # --------------------------------------
+
+          DEPLOY_FAILED=0
+
+          if ! docker compose \
+            -f "$BASE_COMPOSE" \
+            -f "$OVERRIDE_COMPOSE" \
+            up -d backend frontend; then
+
+            echo "Docker Compose deployment command failed."
+            DEPLOY_FAILED=1
+
+          elif ! wait_for_health; then
+
+            echo "Deployment health check failed."
+            DEPLOY_FAILED=1
+
+          fi
+
+          # --------------------------------------
+          # H. Rollback on deployment failure
+          # --------------------------------------
+
+          if [ "$DEPLOY_FAILED" -eq 1 ]; then
+
+            echo "Collecting deployment diagnostics..."
+            collect_diagnostics
+
+            echo "Preparing rollback configuration..."
+
+            cat > "$ROLLBACK_COMPOSE" <<YAML
+          services:
+            backend:
+              image: ${PREVIOUS_BACKEND}
+            frontend:
+              image: ${PREVIOUS_FRONTEND}
+          YAML
+
+            echo "Rolling back to previous production images..."
+
+            if docker compose \
+              -f "$BASE_COMPOSE" \
+              -f "$ROLLBACK_COMPOSE" \
+              up -d backend frontend &&
+              wait_for_health; then
+
+              echo "Rollback successful."
+
+            else
+
+              echo "CRITICAL: Rollback health check failed."
+              collect_diagnostics
+              echo "Manual production inspection is required."
+
+            fi
+
+            exit 1
+          fi
+
+          # --------------------------------------
+          # I. Deployment successful
+          # --------------------------------------
+
+          echo "======================================"
+          echo "DEPLOYMENT SUCCESSFUL"
+          echo "======================================"
+
+          echo "Backend image: $BACKEND_IMAGE"
+          echo "Frontend image: $FRONTEND_IMAGE"
+
+          docker ps
