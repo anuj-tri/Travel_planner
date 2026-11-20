@@ -12,12 +12,20 @@ from app.Schema.auth import (
     UpdateProfileRequest,
     ChangePasswordRequest,
     ValidateResetTokenRequest,
+    DeleteAccountRequest,
 )
 
 from pwdlib import PasswordHash
 
 from sqlalchemy.orm import Session
-from app.models import Users, RefreshToken
+from app.models import (
+    Users,
+    RefreshToken,
+    Trip,
+    TripPreference,
+    Itinerary,
+    ItineraryPlace,
+)
 
 import os
 from dotenv import load_dotenv
@@ -32,6 +40,7 @@ import secrets
 from app.redis_client import redis_client
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 password_hash = PasswordHash.recommended()  # here i am creating password hashing object
@@ -561,3 +570,121 @@ def change_password_service(request: ChangePasswordRequest, current_user, db: Se
     db.refresh(current_user)
 
     return {"message": "Password changed successfully"}
+
+
+# delete the current user's account
+def delete_account_service(request: DeleteAccountRequest, current_user, db: Session):
+    # 1.decrypt the current password received from angular
+    current_password = decrypt_request_password(request.current_password)
+
+    # 2. Lock and fetch the user record
+    user = (
+        db.query(Users)
+        .filter(Users.user_id == current_user.user_id)
+        .with_for_update()
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User account not found"
+        )
+
+    # 3. Verify the current password
+    if not verify_password(current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+    user_id = user.user_id
+
+    try:
+        # 4. fetch all trips belonging to this user
+        trip_ids = [
+            trip_id
+            for (trip_id,) in (
+                db.query(Trip.trip_id).filter(Trip.user_id == user_id).all()
+            )
+        ]
+
+        if trip_ids:
+
+            # 5. fetch itinerary_ids belonging to those trips
+            itinerary_ids = [
+                itinerary_id
+                for (itinerary_id,) in (
+                    db.query(Itinerary.itinerary_id)
+                    .filter(Itinerary.trip_id.in_(trip_ids))
+                    .all()
+                )
+            ]
+
+            # 6. delete itinerary-place mappings
+            if itinerary_ids:
+                db.query(ItineraryPlace).filter(
+                    ItineraryPlace.itinerary_id.in_(itinerary_ids)
+                ).delete(synchronize_session=False)
+
+                # 7. Delete itineraries
+                db.query(Itinerary).filter(
+                    Itinerary.itinerary_id.in_(itinerary_ids)
+                ).delete(synchronize_session=False)
+
+            # 8. Delete trip-preference mappings
+            db.query(TripPreference).filter(
+                TripPreference.trip_id.in_(trip_ids)
+            ).delete(synchronize_session=False)
+
+            # 9. Delete trips
+            db.query(Trip).filter(Trip.trip_id.in_(trip_ids)).delete(
+                synchronize_session=False
+            )
+
+        # 10. Delete all refresh tokens belonging to the user
+        db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete(
+            synchronize_session=False
+        )
+
+        # 11. delete the user account
+        db.delete(user)
+
+        # 12. commit all database deletions together
+        db.commit()
+
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except Exception:
+        db.rollback()
+
+        logger.exception("Account deletion failed for user_id=%s", user_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to delete the account. Please try again",
+        )
+
+    # 13. Clean up password-reset tokens in Redis
+    # this happens after the database transaction succeeds.
+
+    try:
+        user_key = f"reset:user:{user_id}"
+
+        previous_hash = redis_client.get(user_key)
+
+        if previous_hash:
+            if isinstance(previous_hash, bytes):
+                previous_hash = previous_hash.decode("utf-8")
+
+            token_key = f"reset:token:{previous_hash}"
+
+            with redis_client.pipeline(transaction=True) as pipe:
+                pipe.delete(token_key)
+                pipe.delete(user_key)
+                pipe.execute()
+
+    except Exception:
+        # account deleteion has already succeded in the database.
+        # redis cleanup failure should not reverse that success.
+        logger.exception("Redis password-reset cleanup failed for user_id=%s", user_id)
+    return {"message": "Account deleted successfully"}

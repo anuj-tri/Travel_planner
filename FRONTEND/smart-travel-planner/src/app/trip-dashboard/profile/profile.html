@@ -194,6 +194,111 @@
             }
           </div>
         </div>
+
+
+        <!-- DELETE ACCOUNT SECTION -->
+        <div class="delete-account-section">
+          <div class="delete-account-card">
+
+            <div class="delete-account-heading">
+              <h2>DELETE YOUR ACCOUNT</h2>
+              <p>
+                Permanently delete your account and all associated travel data.
+                This action cannot be undone.
+              </p>
+            </div>
+
+            <div class="delete-account-actions">
+              <button
+                type="button"
+                (click)="openDeleteAccountDialog()"
+                [disabled]="isDeletingAccount"
+              >
+                DELETE ACCOUNT
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- DELETE ACCOUNT CONFIRMATION -->
+
+        @if (showDeleteAccountDialog) {
+          <div
+            class="delete-dialog-overlay"
+            (click)="cancelDeleteAccount()"
+          >
+            <div
+              class="delete-dialog"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="delete-dialog-title"
+              aria-describedby="delete-dialog-description"
+              (click)="$event.stopPropagation()"
+            >
+
+              <div class="delete-dialog-icon">!</div>
+
+              <h2 id="delete-dialog-title">
+                DELETE YOUR ACCOUNT?
+              </h2>
+
+              <p
+                id="delete-dialog-description"
+                class="delete-dialog-description"
+              >
+                This action is permanent. Your account, trips and itineraries
+                will be permanently deleted and cannot be recovered.
+              </p>
+
+              <div class="delete-password-group">
+                <label for="deleteAccountPassword">
+                  CURRENT PASSWORD
+                </label>
+
+                <input
+                  id="deleteAccountPassword"
+                  type="password"
+                  autocomplete="current-password"
+                  [(ngModel)]="deleteAccountPassword"
+                  placeholder="Enter your current password"
+                  [disabled]="isDeletingAccount"
+                />
+
+                @if (deleteAccountPasswordError) {
+                  <p class="field-error">
+                    {{ deleteAccountPasswordError }}
+                  </p>
+                }
+              </div>
+
+              @if (deleteAccountError) {
+                <p class="field-error">
+                  {{ deleteAccountError }}
+                </p>
+              }
+
+              <div class="delete-dialog-actions">
+
+                <button
+                  type="button"
+                  class="cancel-delete-button"
+                  (click)="cancelDeleteAccount()"
+                  [disabled]="isDeletingAccount"
+                >
+                  CANCEL
+                </button>
+
+                <button
+                  type="button"
+                  class="confirm-delete-button"
+                  (click)="deleteAccount()"
+                  [disabled]="isDeletingAccount"
+                >
+                  {{ isDeletingAccount ? 'DELETING...' : 'DELETE PERMANENTLY' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        }
       }
     </div>
   </body>
