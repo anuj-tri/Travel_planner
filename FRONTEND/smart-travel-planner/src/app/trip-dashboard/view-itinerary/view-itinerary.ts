@@ -21,7 +21,7 @@ export class ViewItinerary implements OnInit {
   selectedDay: any = null;
   tripStatus: string = '';
 
-  //loading/ errro
+  //loading/ error
   isLoading: boolean = false;
 
   message: string = '';
@@ -35,6 +35,19 @@ export class ViewItinerary implements OnInit {
   //Google maps
   map: google.maps.Map | null = null;
   markers: google.maps.Marker[] = [];
+
+  //keep the original place index linked to its marker.
+  //This handles places that do not have coordinates.
+  markerByPlaceIndex = new Map<number, google.maps.Marker>();
+
+  activeInfoWindow: google.maps.InfoWindow | null = null;
+  selectedPlaceIndex: number | null = null;
+
+  // Stores the road route polylines currently displayed on the map.
+  routePolylines: google.maps.Polyline[] = [];
+
+  // Prevents an older route request from drawing after the user switches days.
+  private routeRequestId = 0;
 
   constructor(
     private http: HttpClient,
@@ -257,45 +270,43 @@ export class ViewItinerary implements OnInit {
   updateMap(): void {
     // this make sure map exists
 
-    if (!this.map) {
-      return;
-    }
+    if (!this.map || !this.selectedDay) return;
 
-    //Make sure day is selected
-
-    if (!this.selectedDay) {
-      return;
-    }
-
-    // get place for the selected day
     const places = this.selectedDay.itinerary_data?.places;
+
+    //remove marker from the previously selected day.
+    this.markerByPlaceIndex.forEach((marker) => marker.setMap(null));
+    this.markers = [];
+    this.markerByPlaceIndex.clear();
+
+    // Remove the previous day's driving route.
+    this.routeRequestId++;
+
+    this.routePolylines.forEach((polyline) => {
+      polyline.setMap(null);
+    });
+
+    this.routePolylines = [];
+
+    //close any previously opened infowondow.
+    this.activeInfoWindow?.close();
+    this.activeInfoWindow = null;
+
+    //resety selected place  when the day chnages.
+    this.selectedPlaceIndex = null;
 
     if (!places || places.length === 0) {
       console.log('No place found for selected day.');
       return;
     }
 
-    console.log('Updating map for Day:', this.selectedDay.day_number);
-    console.log('Places:', places);
-
-    //Remove old markers
-    this.markers.forEach((marker) => {
-      marker.setMap(null);
-    });
-
-    this.markers = [];
-
     // Create bounds so google maps can show all places
     const bounds = new google.maps.LatLngBounds();
 
     //create marker for every place
     places.forEach((place: any, index: number) => {
-      if (place.latitude === undefined || place.longitude === undefined) {
+      if (place.latitude == null || place.longitude == null) {
         console.warn('Coordinates missing for:', place.place_name);
-        console.log('Place data received by map:', place);
-        console.log('Latitude:', place.latitude);
-        console.log('Longitude:', place.longitude);
-
         return;
       }
 
@@ -304,8 +315,13 @@ export class ViewItinerary implements OnInit {
         lng: Number(place.longitude),
       };
 
+      if (!Number.isFinite(position.lat) || !Number.isFinite(position.lng)) {
+        console.warn('Invalid coordinates for:', place.place_name);
+        return;
+      }
+
       const marker = new google.maps.Marker({
-        position: position,
+        position,
         map: this.map,
         title: place.place_name,
         label: `${index + 1}`,
@@ -313,20 +329,161 @@ export class ViewItinerary implements OnInit {
 
       this.markers.push(marker);
 
+      //store the marker using the original itinerary place index.
+      this.markerByPlaceIndex.set(index, marker);
+
       bounds.extend(position);
     });
 
     //Adjust map yo show all markers
-
     if (this.markers.length > 0) {
       this.map.fitBounds(bounds);
     }
 
-    console.log('map updated with', this.markers.length, 'markers.');
+    console.log('Map updated with', this.markers.length, 'markers.');
+
+    // Draw the driving route for the selected day.
+    void this.drawDrivingRoute(places);
+  }
+
+  // Draw the actual driving route for the selected day's itinerary.
+  async drawDrivingRoute(places: any[]): Promise<void> {
+    try {
+      const currentRequestId = this.routeRequestId;
+      // Keep only places with valid coordinates, preserving their order.
+      const validPlaces = places.filter((place: any) => {
+        const lat = Number(place.latitude);
+        const lng = Number(place.longitude);
+
+        return (
+          place.latitude != null &&
+          place.longitude != null &&
+          Number.isFinite(lat) &&
+          Number.isFinite(lng)
+        );
+      });
+
+      // A route requires at least an origin and destination.
+      if (validPlaces.length < 2) {
+        console.log('Not enough valid places to calculate a route.');
+        return;
+      }
+
+      // Google Routes API supports a maximum of 25 intermediate waypoints.
+      if (validPlaces.length > 27) {
+        console.warn('Too many places for a single driving route.');
+        return;
+      }
+
+      // Import Google's Routes library.
+      const { Route } = (await importLibrary(
+        'routes'
+      )) as google.maps.RoutesLibrary;
+
+      const origin = {
+        lat: Number(validPlaces[0].latitude),
+        lng: Number(validPlaces[0].longitude),
+      };
+
+      const destination = {
+        lat: Number(validPlaces[validPlaces.length - 1].latitude),
+        lng: Number(validPlaces[validPlaces.length - 1].longitude),
+      };
+
+      const intermediates = validPlaces.slice(1, -1).map((place: any) => ({
+        location: {
+          lat: Number(place.latitude),
+          lng: Number(place.longitude),
+        },
+      }));
+
+      // Calculate the actual driving route.
+      const { routes } = await Route.computeRoutes({
+        origin,
+        destination,
+        intermediates,
+        travelMode: 'DRIVING',
+        optimizeWaypointOrder: false,
+        fields: ['path'],
+      });
+
+      // Ignore the response if the user has switched to another day.
+      if (this.routeRequestId !== currentRequestId || !this.map) {
+        return;
+      }
+
+      if (!routes || routes.length === 0) {
+        console.warn('No driving route found for this day.');
+        return;
+      }
+
+      // Create the road-following route polyline.
+      const polylines = routes[0].createPolylines();
+
+      polylines.forEach((polyline) => {
+        polyline.setOptions({
+          strokeColor: '#2563eb',
+          strokeOpacity: 0.9,
+          strokeWeight: 5,
+        });
+
+        polyline.setMap(this.map);
+      });
+
+      this.routePolylines = polylines;
+
+      console.log('Driving route displayed successfully.');
+    } catch (error) {
+      console.error('Failed to calculate driving route:', error);
+    }
+  }
+
+  focusPlaceOnMap(placeIndex: number): void {
+    if (!this.map || !this.selectedDay) return;
+
+    const marker = this.markerByPlaceIndex.get(placeIndex);
+
+    if (!marker) {
+      console.warn('No map marker available for itinerary place index:', placeIndex);
+      return;
+    }
+
+    const position = marker.getPosition();
+
+    if (!position) return;
+
+    // Remember which place card is selected.
+    this.selectedPlaceIndex = placeIndex;
+
+    // Move the map to the selected marker and zoom in.
+    this.map.panTo(position);
+    this.map.setZoom(15);
+
+    // Close the previously opened InfoWindow.
+    this.activeInfoWindow?.close();
+
+    const places = this.selectedDay.itinerary_data?.places;
+    const place = places?.[placeIndex];
+
+    if (!place) return;
+
+    const infoContent = document.createElement('div');
+    infoContent.textContent = place.place_name;
+
+    // Display the selected place name.
+    this.activeInfoWindow = new google.maps.InfoWindow({
+      content: infoContent,
+    });
+
+    this.activeInfoWindow.open({
+      map: this.map,
+      anchor: marker,
+    });
+
+    this.cdr.detectChanges();
   }
 
   //select day
-
   selectDay(index: number): void {
     console.log('Chnaging day from', this.selectedDayIndex, 'to', index);
 
