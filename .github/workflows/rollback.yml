@@ -1,0 +1,239 @@
+
+name: Smart Travel Planner Manual Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Previous working deployment commit SHA (40 characters)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smart-travel-planner-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_REGISTRY: 450993990655.dkr.ecr.ap-southeast-2.amazonaws.com
+  BACKEND_REPOSITORY: smart-travel-planner-backend
+  FRONTEND_REPOSITORY: smart-travel-planner-frontend
+
+jobs:
+  rollback:
+    name: Restore Previous Production Images
+    runs-on: [self-hosted, Linux, X64]
+    environment: production
+
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Validate image tag
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid image tag. Enter a 40-character commit SHA."
+            exit 1
+          fi
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
+
+      - name: Verify EC2 AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" |
+          docker login \
+            --username AWS \
+            --password-stdin "$ECR_REGISTRY"
+
+      - name: Verify previous images exist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws ecr describe-images \
+            --region "$AWS_REGION" \
+            --repository-name "$BACKEND_REPOSITORY" \
+            --image-ids imageTag="$IMAGE_TAG" \
+            >/dev/null
+
+          aws ecr describe-images \
+            --region "$AWS_REGION" \
+            --repository-name "$FRONTEND_REPOSITORY" \
+            --image-ids imageTag="$IMAGE_TAG" \
+            >/dev/null
+
+          echo "Both previous images exist in ECR."
+
+      - name: Rollback production containers
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          cd /home/ec2-user
+
+          BASE_COMPOSE="/home/ec2-user/docker-compose.prod.yml"
+          OVERRIDE_COMPOSE="${RUNNER_TEMP}/compose.manual-rollback.yml"
+          RECOVERY_COMPOSE="${RUNNER_TEMP}/compose.manual-recovery.yml"
+
+          BACKEND_IMAGE="$ECR_REGISTRY/$BACKEND_REPOSITORY:$IMAGE_TAG"
+          FRONTEND_IMAGE="$ECR_REGISTRY/$FRONTEND_REPOSITORY:$IMAGE_TAG"
+
+          test -f "$BASE_COMPOSE"
+          test -f "/home/ec2-user/.env.production"
+
+          docker inspect smart-travel-backend >/dev/null
+          docker inspect smart-travel-frontend >/dev/null
+
+          echo "Production configuration verified."
+
+          PREVIOUS_BACKEND=$(docker inspect \
+            --format '{{.Config.Image}}' smart-travel-backend)
+
+          PREVIOUS_FRONTEND=$(docker inspect \
+            --format '{{.Config.Image}}' smart-travel-frontend)
+
+          REQUESTED_BACKEND="$ECR_REGISTRY/$BACKEND_REPOSITORY:$IMAGE_TAG"
+          REQUESTED_FRONTEND="$ECR_REGISTRY/$FRONTEND_REPOSITORY:$IMAGE_TAG"
+
+          if [ "$REQUESTED_BACKEND" = "$PREVIOUS_BACKEND" ] &&
+            [ "$REQUESTED_FRONTEND" = "$PREVIOUS_FRONTEND" ]; then
+
+              echo "The requested images are already running."
+              echo "No rollback is required."
+              exit 0
+          fi
+
+          echo "Currently running backend: $PREVIOUS_BACKEND"
+          echo "Currently running frontend: $PREVIOUS_FRONTEND"
+
+          echo "Verifying previous production images are available..."
+
+          docker pull "$PREVIOUS_BACKEND"
+          docker pull "$PREVIOUS_FRONTEND"
+
+          echo "Previous production images are available for recovery."
+
+          cat > "$OVERRIDE_COMPOSE" <<YAML
+          services:
+            backend:
+              image: ${BACKEND_IMAGE}
+            frontend:
+              image: ${FRONTEND_IMAGE}
+          YAML
+
+          echo "Pulling requested previous images..."
+
+          docker compose \
+            -f "$BASE_COMPOSE" \
+            -f "$OVERRIDE_COMPOSE" \
+            pull backend frontend
+
+          wait_for_health() {
+            echo "Checking application health..."
+
+            for i in $(seq 1 24); do
+              BACKEND_OK=false
+              FRONTEND_OK=false
+
+              if docker exec smart-travel-backend \
+                python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs', timeout=4)" \
+                >/dev/null 2>&1; then
+                BACKEND_OK=true
+              fi
+
+              if curl -fsS --max-time 4 \
+                http://127.0.0.1/ >/dev/null 2>&1; then
+                FRONTEND_OK=true
+              fi
+
+              if [ "$BACKEND_OK" = true ] &&
+                 [ "$FRONTEND_OK" = true ]; then
+                echo "Both containers are healthy."
+                return 0
+              fi
+
+              echo "Health check attempt $i/24 failed."
+              sleep 5
+            done
+
+            return 1
+          }
+
+          echo "Restoring requested previous deployment..."
+
+          DEPLOY_FAILED=0
+
+          if ! docker compose \
+            -f "$BASE_COMPOSE" \
+            -f "$OVERRIDE_COMPOSE" \
+            up -d backend frontend; then
+            DEPLOY_FAILED=1
+          elif ! wait_for_health; then
+            DEPLOY_FAILED=1
+          fi
+
+          if [ "$DEPLOY_FAILED" -eq 1 ]; then
+
+              echo "Requested rollback failed."
+              echo "Restoring previously running production images..."
+
+              cat > "$RECOVERY_COMPOSE" <<YAML
+          services:
+            backend:
+              image: ${PREVIOUS_BACKEND}
+            frontend:
+              image: ${PREVIOUS_FRONTEND}
+          YAML
+
+              RECOVERY_FAILED=0
+
+              if ! docker compose \
+                -f "$BASE_COMPOSE" \
+                -f "$RECOVERY_COMPOSE" \
+                up -d backend frontend; then
+
+                RECOVERY_FAILED=1
+
+              elif ! wait_for_health; then
+
+                RECOVERY_FAILED=1
+
+              fi
+
+              if [ "$RECOVERY_FAILED" -eq 0 ]; then
+
+                echo "Previous production deployment successfully restored."
+
+              else
+
+                echo "CRITICAL: Recovery failed."
+                echo "Manual production intervention is required."
+
+                docker ps -a
+
+                docker logs --tail 100 smart-travel-backend || true
+                docker logs --tail 100 smart-travel-frontend || true
+
+              fi
+
+              exit 1
+          fi
+
+          echo "======================================"
+          echo "MANUAL ROLLBACK SUCCESSFUL"
+          echo "======================================"
+
+          echo "Backend restored: $BACKEND_IMAGE"
+          echo "Frontend restored: $FRONTEND_IMAGE"
+
+          docker ps
