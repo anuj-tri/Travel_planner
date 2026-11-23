@@ -12,6 +12,8 @@ from app.Schema.auth import (
     UpdateProfileResponse,
     ChangePasswordRequest,
     ValidateResetTokenRequest,
+    DeleteAccountRequest,
+    DeleteAccountResponse,
 )
 
 from app.database import get_db
@@ -28,6 +30,7 @@ from app.services.auth_service import (
     refresh_token_service,
     logout_service,
     validate_reset_token_service,
+    delete_account_service,
 )
 
 from app.security import get_current_user
@@ -193,3 +196,33 @@ def validate_reset_token(
     request: ValidateResetTokenRequest, db: Session = Depends(get_db)
 ):
     return validate_reset_token_service(request, db)
+
+
+#delete the user
+@router.delete("/me", response_model = DeleteAccountResponse)
+def delete_current_user_account(
+    request: DeleteAccountRequest,
+    response: Response,
+    current_user= Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    result = delete_account_service(request, current_user, db)
+
+    response.delete_cookie(
+        key="access_token",
+        path = "/",
+        httponly=True,
+        secure=False,
+        samesite="lax",
+    )
+
+    response.delete_cookie(
+        key="refresh_token",
+        path = "/",
+        httponly=True,
+        secure= False,
+        samesite="lax",
+
+    )
+
+    return result

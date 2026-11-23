@@ -21,7 +21,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-
 class LoginResponse(BaseModel):
     message: str
     email: EmailStr
@@ -52,17 +51,10 @@ class CurrentUserResponse(BaseModel):
 
 # to change the first name and last name
 
+
 class UpdateProfileRequest(BaseModel):
-    first_name: str = Field(
-        min_length=1,
-        max_length=15,
-        pattern= r"^[A-Za-z]+$"
-        )
-    last_name: str = Field(
-        min_length=1,
-        max_length=15,
-        pattern= r"^[A-Za-z]+$"
-        )
+    first_name: str = Field(min_length=1, max_length=15, pattern=r"^[A-Za-z]+$")
+    last_name: str = Field(min_length=1, max_length=15, pattern=r"^[A-Za-z]+$")
 
 
 class UpdateProfileResponse(BaseModel):
@@ -75,5 +67,16 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
     confirm_new_password: str
 
+
 class ValidateResetTokenRequest(BaseModel):
     token: str
+
+
+# Delete account request
+class DeleteAccountRequest(BaseModel):
+    current_password: str
+
+
+# Delete account response
+class DeleteAccountResponse(BaseModel):
+    message: str

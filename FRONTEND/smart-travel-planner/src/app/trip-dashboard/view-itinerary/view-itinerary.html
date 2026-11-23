@@ -98,10 +98,14 @@
           <div class="place-list">
             <div
               class="place-card"
-              *ngFor="
-                let place of selectedDay.itinerary_data.places;
-                let i = index
-              "
+              *ngFor="let place of selectedDay.itinerary_data.places; let i = index"
+              (click)="focusPlaceOnMap(i)"
+              (keydown.enter)="focusPlaceOnMap(i)"
+              (keydown.space)="$event.preventDefault(); focusPlaceOnMap(i)"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'Show ' + place.place_name + ' on map'"
+              [class.active-place]="selectedPlaceIndex === i"
             >
               <div class="place-number">{{ i + 1 }}</div>
 

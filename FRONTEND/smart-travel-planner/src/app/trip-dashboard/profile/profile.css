@@ -1,10 +1,14 @@
 /* MAIN PROFILE PAGE*/
 
 .profile-page {
-  padding: 60px 70px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 40px clamp(15px, 5vw, 70px);
   min-height: calc(100vh - 85px);
   box-sizing: border-box;
   font-family: Georgia, 'Times New Roman', serif;
+  overflow-x: hidden;
 }
 
 /* PROFILE HEADING*/
@@ -28,17 +32,15 @@
 
 .profile-card {
   display: flex;
-  width: 850px;
+  width: 100%;
+  max-width: 850px;
   min-height: 360px;
-
   background-color: white;
-
   border: 1px solid lightgray;
   border-radius: 12px;
-
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* LEFT SECTION*/
@@ -235,9 +237,10 @@
 /* CHANGE PASSWORD SECTION*/
 
 .password-section {
-  width: 850px;
-
+  width: 100%;
+  max-width: 850px;
   margin-top: 35px;
+  box-sizing: border-box;
 }
 
 /* CHANGE PASSWORD CARD*/
@@ -489,4 +492,228 @@
   color: dimgray;
 
   padding-top: 20px;
+}
+
+/* DELETE ACCOUNT SECTION */
+
+.delete-account-section {
+  width: 100%;
+  max-width: 850px;
+  margin-top: 35px;
+  box-sizing: border-box;
+}
+
+.delete-account-card {
+  width: 100%;
+  padding: 30px 40px;
+  box-sizing: border-box;
+  background-color: white;
+  border: 1px solid lightgray;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.delete-account-heading h2 {
+  margin: 0 0 10px;
+  font-size: 24px;
+}
+
+.delete-account-heading p {
+  margin: 0;
+  color: dimgray;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.delete-account-actions {
+  margin-top: 22px;
+}
+
+.delete-account-actions button {
+  min-width: 150px;
+  height: 40px;
+  padding: 0 20px;
+  border: 1px solid black;
+  border-radius: 6px;
+  background-color: black;
+  color: white;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.delete-account-actions button:hover {
+  background-color: darkslategray;
+}
+
+.delete-account-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* DELETE CONFIRMATION POPUP */
+
+.delete-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+}
+
+.delete-dialog {
+  width: 100%;
+  max-width: 480px;
+  padding: 32px;
+  box-sizing: border-box;
+  background-color: white;
+  border-radius: 14px;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+}
+
+.delete-dialog-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: #fff0f0;
+  border: 2px solid #f0bcbc;
+  color: #c62828;
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.delete-dialog h2 {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 22px;
+  color: #b71c1c;
+}
+
+.delete-dialog-description {
+  margin: 0 0 22px;
+  color: #444;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.delete-password-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.delete-password-group label {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.delete-password-group input {
+  width: 100%;
+  height: 43px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid lightgray;
+  border-radius: 6px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 14px;
+}
+
+.delete-password-group input:focus {
+  outline: none;
+  border-color: #c62828;
+  box-shadow: 0 0 5px rgba(198, 40, 40, 0.2);
+}
+
+.delete-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-delete-button,
+.confirm-delete-button {
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 6px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.cancel-delete-button {
+  background-color: white;
+  color: black;
+  border: 1px solid lightgray;
+}
+
+.confirm-delete-button {
+  background-color: #c62828;
+  color: white;
+  border: 1px solid #c62828;
+}
+
+.confirm-delete-button:hover:not(:disabled) {
+  background-color: #a31515;
+}
+
+.delete-account-actions button:focus-visible,
+.cancel-delete-button:focus-visible,
+.confirm-delete-button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+
+@media (max-width: 650px) {
+  .profile-card {
+    flex-direction: column;
+  }
+
+  .profile-left,
+  .profile-details {
+    width: 100%;
+  }
+
+  .profile-left {
+    padding: 25px;
+  }
+
+  .profile-details {
+    padding: 25px;
+  }
+
+  .password-card {
+    padding: 25px;
+  }
+}
+
+@media (max-width: 600px) {
+  .delete-account-card {
+    padding: 25px 20px;
+  }
+
+  .delete-dialog {
+    padding: 25px 20px;
+  }
+
+  .delete-dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancel-delete-button,
+  .confirm-delete-button {
+    width: 100%;
+  }
 }
