@@ -71,3 +71,6 @@ secrets/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local backup of old OneDrive Git pointer
+.git_onedrive_pointer_backup
