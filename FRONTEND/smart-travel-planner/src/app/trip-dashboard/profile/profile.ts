@@ -45,6 +45,7 @@ export class Profile implements OnInit {
   // DELETE ACCOUNT
   showDeleteAccountDialog = false;
   deleteAccountPassword = '';
+  showDeleteAccountPassword = false;
 
   deleteAccountPasswordError = '';
   deleteAccountError = '';
@@ -331,13 +332,15 @@ export class Profile implements OnInit {
     }
   }
 
-  //open dleete account dialog
+  //open delete account dialog
   openDeleteAccountDialog(): void {
     this.showDeleteAccountDialog = true;
 
     this.deleteAccountPassword = '';
     this.deleteAccountPasswordError = '';
     this.deleteAccountError = '';
+
+    this.showDeleteAccountPassword = false;
 
     this.cdr.detectChanges();
   }
@@ -347,6 +350,7 @@ export class Profile implements OnInit {
     if (this.isDeletingAccount) {
       return;
     }
+    this.showDeleteAccountPassword = false;
 
     this.showDeleteAccountDialog = false;
     this.deleteAccountPassword = '';

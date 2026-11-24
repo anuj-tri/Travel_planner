@@ -244,9 +244,9 @@
               <p
                 id="delete-dialog-description"
                 class="delete-dialog-description"
-              >
+              ><strong>
                 This action is permanent. Your account, trips and itineraries
-                will be permanently deleted and cannot be recovered.
+                will be permanently deleted and cannot be recovered.</strong>
               </p>
 
               <div class="delete-password-group">
@@ -254,14 +254,25 @@
                   CURRENT PASSWORD
                 </label>
 
-                <input
-                  id="deleteAccountPassword"
-                  type="password"
-                  autocomplete="current-password"
-                  [(ngModel)]="deleteAccountPassword"
-                  placeholder="Enter your current password"
-                  [disabled]="isDeletingAccount"
-                />
+                <div class="password-wrapper">
+                  <input
+                    id="deleteAccountPassword"
+                    [type]="showDeleteAccountPassword ? 'text' : 'password'"
+                    autocomplete="current-password"
+                    [(ngModel)]="deleteAccountPassword"
+                    placeholder="Enter your current password"
+                    [disabled]="isDeletingAccount"
+                  />
+                  <button
+                    type="button"
+                    class="toggle-password"
+                    (click)="showDeleteAccountPassword = !showDeleteAccountPassword"
+                    [disabled]="isDeletingAccount"
+                    [attr.aria-label]="showDeleteAccountPassword ? 'Hide password' : 'Show password'"
+                  >
+                    {{ showDeleteAccountPassword ? 'Hide' : 'Show' }}
+                  </button>
+                </div>
 
                 @if (deleteAccountPasswordError) {
                   <p class="field-error">

@@ -619,18 +619,12 @@
   font-weight: bold;
 }
 
-.delete-password-group input {
-  width: 100%;
+.delete-password-group .password-wrapper input {
   height: 43px;
-  padding: 0 12px;
-  box-sizing: border-box;
-  border: 1px solid lightgray;
-  border-radius: 6px;
-  font-family: Georgia, 'Times New Roman', serif;
   font-size: 14px;
 }
 
-.delete-password-group input:focus {
+.delete-password-group .password-wrapper input:focus {
   outline: none;
   border-color: #c62828;
   box-shadow: 0 0 5px rgba(198, 40, 40, 0.2);

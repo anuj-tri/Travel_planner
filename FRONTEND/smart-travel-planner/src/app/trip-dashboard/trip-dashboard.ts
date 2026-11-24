@@ -17,6 +17,10 @@ export class TripDashboard implements OnInit{
   firstName: string = '';
   lastName: string = '';
 
+  //sidebar state
+  isSidebarCollapsed = false;
+  isMobileMenuOpen = false;
+
   constructor(
     private cdr: ChangeDetectorRef,
     private http: HttpClient,
@@ -26,6 +30,20 @@ export class TripDashboard implements OnInit{
 
   ngOnInit(): void {
     this.getCurrentUser();
+  }
+
+  toggleSidebar(): void {
+    if (window.innerWidth <= 768) {
+      this.isMobileMenuOpen = !this.isMobileMenuOpen;
+    } else {
+      this.isSidebarCollapsed = !this.isSidebarCollapsed;
+    }
+  }
+
+  closeMobileMenu(): void {
+    if (window.innerWidth <= 768) {
+      this.isMobileMenuOpen = false;
+    }
   }
 
   getCurrentUser(): void {

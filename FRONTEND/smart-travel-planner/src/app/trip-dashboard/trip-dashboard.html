@@ -6,9 +6,21 @@
     <title><Trip Dashboard></title>
   </head>
   <body>
-    <div class="trip-dashboard">
-      <!-- Top Header -->
+    <div
+      class="trip-dashboard"
+      [class.sidebar-collapsed]="isSidebarCollapsed"
+      [class.mobile-menu-open]="isMobileMenuOpen"
+    >
       <header class="top-header">
+        <button
+          type="button"
+          class="menu-toggle"
+          (click)="toggleSidebar()"
+          [attr.aria-label]="isMobileMenuOpen ? 'Close navigation menu' : 'Toggle navigation menu'"
+          [attr.aria-expanded]="isMobileMenuOpen"
+        >
+          ☰
+        </button>
         <div class="website-name">
           <h2>SMART TRAVEL PLANNER</h2>
         </div>
@@ -18,29 +30,79 @@
           <span>{{ firstName }} {{ lastName }}</span>
         </div>
 
-        <!-- Left Sidebar -->
       </header>
-      <div class="sidebar">
+
+      <!--Mobile Backdrop -->
+      <button
+        type="button"
+        class="sidebar-backdrop"
+        aria-label="Close navigation menu"
+        (click)="closeMobileMenu()"
+        tabindex="-1"
+      ></button>
+
+      <!-- Left Sidebar -->
+      <aside class="sidebar">
+
         <div class="sidebar-menu top-menu">
-          <a routerLink="/trip-dashboard/create-new-trip" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> CREATE NEW TRIP</a>
 
-          <a routerLink="/trip-dashboard/saved-trips" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> SAVED TRIP</a>
+          <a
+            routerLink="/trip-dashboard/create-new-trip"
+            routerLinkActive="active-link"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeMobileMenu()"
+          >
+            <span class="menu-icon">✈︎</span>
+            <span class="menu-label">CREATE NEW TRIP</span>
+          </a>
 
-          <a routerLink="/trip-dashboard/modify-trip" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> MODIFY TRIP</a>
+          <a
+            routerLink="/trip-dashboard/saved-trips"
+            routerLinkActive="active-link"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeMobileMenu()"
+          >
+            <span class="menu-icon">☰</span>
+            <span class="menu-label">SAVED TRIP</span>
+          </a>
+
+          <a
+            routerLink="/trip-dashboard/modify-trip"
+            routerLinkActive="active-link"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeMobileMenu()"
+          >
+            <span class="menu-icon">✎</span>
+            <span class="menu-label">MODIFY TRIP</span>
+          </a>
+
         </div>
 
-        <!-- Bottom menue-->
+        <div class="sidebar-menu bottom-menu">
 
-        <div class ="sidebar-menu bottom-menu">
+          <a
+            routerLink="/trip-dashboard/profile"
+            routerLinkActive="active-link"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeMobileMenu()"
+          >
+            <span class="menu-icon">◉</span>
+            <span class="menu-label">PROFILE</span>
+          </a>
 
-          <a routerLink="/trip-dashboard/profile" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true}"> PROFILE</a>
+          <button
+            class="logout-button"
+            type="button"
+            (click)="logout()"
+          >
+            <span class="menu-icon">⏻</span>
+            <span class="menu-label">LOGOUT</span>
+          </button>
 
-          <button class ="logout-button" type ="button" (click)="logout()">LOGOUT</button>
         </div>
-      </div>
 
-      <!--Right Side : Dynamic Page-->
-
+      </aside>
+      <!--Dynamic Page Content-->
       <div class="main-content">
         <router-outlet></router-outlet>
       </div>
