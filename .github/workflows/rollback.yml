@@ -1,4 +1,3 @@
-
 name: Smart Travel Planner Manual Rollback
 
 on:
@@ -88,13 +87,25 @@ jobs:
           BACKEND_IMAGE="$ECR_REGISTRY/$BACKEND_REPOSITORY:$IMAGE_TAG"
           FRONTEND_IMAGE="$ECR_REGISTRY/$FRONTEND_REPOSITORY:$IMAGE_TAG"
 
+          # --------------------------------------
+          # A. Validate production configuration
+          # --------------------------------------
+
           test -f "$BASE_COMPOSE"
           test -f "/home/ec2-user/.env.production"
+          test -f "/home/ec2-user/.env.redis"
+
+          test -f "/home/ec2-user/smart-travel-planner/secrets/rsa_private_key.pem"
+          test -f "/home/ec2-user/smart-travel-planner/secrets/rsa_public_key.pem"
 
           docker inspect smart-travel-backend >/dev/null
           docker inspect smart-travel-frontend >/dev/null
 
           echo "Production configuration verified."
+
+          # --------------------------------------
+          # B. Capture currently running images
+          # --------------------------------------
 
           PREVIOUS_BACKEND=$(docker inspect \
             --format '{{.Config.Image}}' smart-travel-backend)
@@ -116,12 +127,20 @@ jobs:
           echo "Currently running backend: $PREVIOUS_BACKEND"
           echo "Currently running frontend: $PREVIOUS_FRONTEND"
 
+          # --------------------------------------
+          # C. Preserve current images for recovery
+          # --------------------------------------
+
           echo "Verifying previous production images are available..."
 
           docker pull "$PREVIOUS_BACKEND"
           docker pull "$PREVIOUS_FRONTEND"
 
           echo "Previous production images are available for recovery."
+
+          # --------------------------------------
+          # D. Create requested rollback override
+          # --------------------------------------
 
           cat > "$OVERRIDE_COMPOSE" <<YAML
           services:
@@ -131,6 +150,10 @@ jobs:
               image: ${FRONTEND_IMAGE}
           YAML
 
+          # --------------------------------------
+          # E. Pull requested rollback images
+          # --------------------------------------
+
           echo "Pulling requested previous images..."
 
           docker compose \
@@ -138,10 +161,15 @@ jobs:
             -f "$OVERRIDE_COMPOSE" \
             pull backend frontend
 
+          # --------------------------------------
+          # F. Application health check
+          # --------------------------------------
+
           wait_for_health() {
             echo "Checking application health..."
 
             for i in $(seq 1 24); do
+
               BACKEND_OK=false
               FRONTEND_OK=false
 
@@ -158,16 +186,22 @@ jobs:
 
               if [ "$BACKEND_OK" = true ] &&
                  [ "$FRONTEND_OK" = true ]; then
-                echo "Both containers are healthy."
+                echo "Both containers are responding."
                 return 0
               fi
 
               echo "Health check attempt $i/24 failed."
               sleep 5
+
             done
 
+            echo "Application health check failed."
             return 1
           }
+
+          # --------------------------------------
+          # G. Restore requested previous images
+          # --------------------------------------
 
           echo "Restoring requested previous deployment..."
 
@@ -176,18 +210,26 @@ jobs:
           if ! docker compose \
             -f "$BASE_COMPOSE" \
             -f "$OVERRIDE_COMPOSE" \
-            up -d backend frontend; then
+            up -d --no-deps backend frontend; then
+
             DEPLOY_FAILED=1
+
           elif ! wait_for_health; then
+
             DEPLOY_FAILED=1
+
           fi
+
+          # --------------------------------------
+          # H. Recover previous running deployment
+          # --------------------------------------
 
           if [ "$DEPLOY_FAILED" -eq 1 ]; then
 
-              echo "Requested rollback failed."
-              echo "Restoring previously running production images..."
+            echo "Requested rollback failed."
+            echo "Restoring previously running production images..."
 
-              cat > "$RECOVERY_COMPOSE" <<YAML
+            cat > "$RECOVERY_COMPOSE" <<YAML
           services:
             backend:
               image: ${PREVIOUS_BACKEND}
@@ -195,39 +237,55 @@ jobs:
               image: ${PREVIOUS_FRONTEND}
           YAML
 
-              RECOVERY_FAILED=0
+            RECOVERY_FAILED=0
 
-              if ! docker compose \
-                -f "$BASE_COMPOSE" \
-                -f "$RECOVERY_COMPOSE" \
-                up -d backend frontend; then
+            if ! docker compose \
+              -f "$BASE_COMPOSE" \
+              -f "$RECOVERY_COMPOSE" \
+              up -d --no-deps backend frontend; then
 
-                RECOVERY_FAILED=1
+              RECOVERY_FAILED=1
 
-              elif ! wait_for_health; then
+            elif ! wait_for_health; then
 
-                RECOVERY_FAILED=1
+              RECOVERY_FAILED=1
 
-              fi
+            fi
 
-              if [ "$RECOVERY_FAILED" -eq 0 ]; then
+            if [ "$RECOVERY_FAILED" -eq 0 ]; then
 
-                echo "Previous production deployment successfully restored."
+              echo "Previous production deployment successfully restored."
 
-              else
+            else
 
-                echo "CRITICAL: Recovery failed."
-                echo "Manual production intervention is required."
+              echo "CRITICAL: Recovery failed."
+              echo "Manual production intervention is required."
 
-                docker ps -a
+              echo "========== CONTAINER STATUS =========="
+              docker ps -a
 
-                docker logs --tail 100 smart-travel-backend || true
-                docker logs --tail 100 smart-travel-frontend || true
+              echo "========== BACKEND LOGS =========="
+              docker logs --tail 100 smart-travel-backend || true
 
-              fi
+              echo "========== FRONTEND LOGS =========="
+              docker logs --tail 100 smart-travel-frontend || true
 
-              exit 1
+              echo "========== REDIS LOGS =========="
+              docker logs --tail 100 smart-travel-redis || true
+
+              echo "========== REDIS INSPECTION =========="
+              docker inspect smart-travel-redis \
+                --format='Status={{.State.Status}} Health={{if .State.Health}}{{.State.Health.Status}}{{else}}No healthcheck{{end}} Error={{.State.Error}}' \
+                || true
+
+            fi
+
+            exit 1
           fi
+
+          # --------------------------------------
+          # I. Rollback successful
+          # --------------------------------------
 
           echo "======================================"
           echo "MANUAL ROLLBACK SUCCESSFUL"
