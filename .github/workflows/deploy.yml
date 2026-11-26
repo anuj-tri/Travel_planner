@@ -1,4 +1,3 @@
-
 name: Smart Travel Planner CI/CD
 
 on:
@@ -23,7 +22,6 @@ env:
   FRONTEND_REPOSITORY: smart-travel-planner-frontend
 
 jobs:
-
   # ==========================================
   # JOB 1: BUILD AND PUSH IMAGES TO ECR
   # Runs on GitHub-hosted infrastructure
@@ -37,7 +35,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-
       # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -133,7 +130,6 @@ jobs:
           echo "Frontend image:"
           echo "$ECR_REGISTRY/$FRONTEND_REPOSITORY:$GITHUB_SHA"
 
-
   # ==========================================
   # JOB 2: DEPLOY IMAGES ON PRODUCTION EC2
   # Runs on your existing self-hosted runner
@@ -149,7 +145,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-
       # 1. Verify EC2 identity
       - name: Verify EC2 AWS identity
         run: |
@@ -190,6 +185,7 @@ jobs:
           test -f "/home/ec2-user/.env.production"
           test -f "/home/ec2-user/smart-travel-planner/secrets/rsa_private_key.pem"
           test -f "/home/ec2-user/smart-travel-planner/secrets/rsa_public_key.pem"
+          test -f "/home/ec2-user/.env.redis"
 
           docker inspect smart-travel-backend >/dev/null
           docker inspect smart-travel-frontend >/dev/null
@@ -228,7 +224,7 @@ jobs:
           docker compose \
             -f "$BASE_COMPOSE" \
             -f "$OVERRIDE_COMPOSE" \
-            pull backend frontend
+            pull redis backend frontend
 
           # --------------------------------------
           # E. Define diagnostic function
@@ -258,6 +254,16 @@ jobs:
             docker inspect smart-travel-frontend \
               --format='Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Error={{.State.Error}}' \
               || true
+
+            echo "========== REDIS LOGS =========="
+
+            docker logs --tail 150 smart-travel-redis || true
+
+            echo "========== REDIS INSPECTION =========="
+
+            docker inspect smart-travel-redis \
+              --format='Status={{.State.Status}} Health={{if .State.Health}}{{.State.Health.Status}}{{else}}No healthcheck{{end}} Error={{.State.Error}}' \
+              || true
           }
 
           # --------------------------------------
@@ -266,6 +272,55 @@ jobs:
 
           wait_for_health() {
             echo "Waiting for production application..."
+
+            for i in $(seq 1 24); do
+
+              BACKEND_OK=false
+              FRONTEND_OK=false
+              REDIS_CONTAINER_OK=false
+              REDIS_CONNECTION_OK=false
+
+              if [ "$(docker inspect \
+                --format '{{.State.Health.Status}}' smart-travel-redis 2>/dev/null)" = "healthy" ]; then
+                REDIS_CONTAINER_OK=true
+              fi
+
+              if docker exec smart-travel-backend \
+                python -c "from app.redis_client import redis_client; redis_client.ping()" \
+                >/dev/null 2>&1; then
+                REDIS_CONNECTION_OK=true
+              fi
+
+              if docker exec smart-travel-backend \
+                python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs', timeout=4)" \
+                >/dev/null 2>&1; then
+                BACKEND_OK=true
+              fi
+
+              if curl -fsS --max-time 4 \
+                http://127.0.0.1/ >/dev/null 2>&1; then
+                FRONTEND_OK=true
+              fi
+
+              if [ "$BACKEND_OK" = true ] &&
+                 [ "$FRONTEND_OK" = true ]&&
+                 [ "$REDIS_CONTAINER_OK" = true ]&&
+                 [ "$REDIS_CONNECTION_OK" = true ]; then
+
+                echo "Backend and frontend are responding."
+                return 0
+              fi
+
+              echo "Health check attempt $i/24 failed."
+              sleep 5
+
+            done
+
+            echo "Application health check failed."
+            return 1
+          }
+          wait_for_rollback_health() {
+            echo "Waiting for rollback application..."
 
             for i in $(seq 1 24); do
 
@@ -284,18 +339,17 @@ jobs:
               fi
 
               if [ "$BACKEND_OK" = true ] &&
-                 [ "$FRONTEND_OK" = true ]; then
-
-                echo "Backend and frontend are responding."
+                [ "$FRONTEND_OK" = true ]; then
+                echo "Rollback backend and frontend are responding."
                 return 0
               fi
 
-              echo "Health check attempt $i/24 failed."
+              echo "Rollback health check attempt $i/24 failed."
               sleep 5
 
             done
 
-            echo "Application health check failed."
+            echo "Rollback health check failed."
             return 1
           }
 
@@ -308,7 +362,7 @@ jobs:
           if ! docker compose \
             -f "$BASE_COMPOSE" \
             -f "$OVERRIDE_COMPOSE" \
-            up -d backend frontend; then
+            up -d redis backend frontend; then
 
             echo "Docker Compose deployment command failed."
             DEPLOY_FAILED=1
@@ -344,8 +398,8 @@ jobs:
             if docker compose \
               -f "$BASE_COMPOSE" \
               -f "$ROLLBACK_COMPOSE" \
-              up -d backend frontend &&
-              wait_for_health; then
+              up -d --no-deps backend frontend &&
+              wait_for_rollback_health; then
 
               echo "Rollback successful."
 
